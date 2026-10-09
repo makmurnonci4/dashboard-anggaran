@@ -208,8 +208,8 @@ function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){retur
 function num(v,d){return Number(v).toLocaleString("id-ID",{maximumFractionDigits:d||0,minimumFractionDigits:d||0})}
 function val(a,m){for(var i=m-1;i>=0;i--)if(a[i]!=null)return a[i];return 0}
 function st(g){var a=(CFG&&CFG.th)||[5,15];return g>=-a[0]?"ok":g>=-a[1]?"warn":"late"}
-var KP={done:"Sudah teralisasi",fisik:"Fisik selesai, keuangan belum tuntas",keu:"Keuangan tuntas, fisik belum selesai",blm:"Belum teralisasi",none:"Belum ada input"};
-function kp(r){return'<span class="pill '+(r.k||"none")+'">'+esc(r.kt||KP[r.k||"none"])+'</span>'}
+var KP={done:"Sudah teralisasi (anggaran terserap 100%)",fisik:"Fisik selesai, keuangan belum tuntas",keu:"Keuangan tuntas, fisik belum selesai",blm:"Belum teralisasi",none:"Belum ada input"};
+function kp(r){var t=(r.p!=null&&r.real!=null)?' title="Realisasi Rp '+num(r.real)+' juta dari pagu Rp '+num(r.p)+' juta"':'';return'<span class="pill '+(r.k||"none")+'"'+t+'>'+esc(r.kt||KP[r.k||"none"])+'</span>'}
 var SL={done:"Sudah teralisasi",fisik:"Fisik selesai, keuangan belum tuntas",keu:"Keuangan tuntas, fisik belum selesai",none:"Belum ada input",ok:"Sesuai target",warn:"Perlu dipercepat",late:"Terlambat"};
 function nm(u){return NAMES[u]||"Pengguna"}
 function idt(u){return nm(u)+(EM[u]?" · "+EM[u]:"")}
@@ -243,7 +243,7 @@ async function unKb(b){var u=kb(b);if(!u)return;var m=mgr(b);b.proyek=JSON.parse
 var UL=[];
 function ur(y,tg){var x=y.x,p=y.u.p||0,real=val(x.r,M),fis=val(x.f,M),pct=p>0?real/p*100:0,gap=pct-tg,nd=x.r.every(function(v){return v==null}),lm=null;
  for(var k=M-1;k>=0;k--)if(x.mt[k]){lm=x.mt[k];break}
- return{u:y.u,n:y.u.name,p:p,real:real,fis:fis,pct:pct,gap:gap,nd:nd,lm:lm,s:nd?"none":st(gap),k:nd?"none":(fis>=99.995&&pct>=99.995)?"done":fis>=99.995?"fisik":pct>=99.995?"keu":"blm",need:Math.max(0,tg/100*p-real),sisa:p-real}}
+ return{u:y.u,n:y.u.name,p:p,real:real,fis:fis,pct:pct,gap:gap,nd:nd,lm:lm,s:nd?"none":st(gap),k:nd?"none":pct>=99.995?"done":fis>=99.995?"fisik":"blm",need:Math.max(0,tg/100*p-real),sisa:p-real}}
 function dt(lm){return lm?new Date(lm.t).toLocaleDateString("id-ID",{day:"numeric",month:"short"})+" · "+esc(nm(lm.u)):"–"}
 function ppkh(u){var s=(u.ppk||[]).map(nm).join(", ");return s?esc(s):'<span class="sub">belum ada</span>'}
 function trow(r,ind,pp){return'<tr'+(ind?' style="font-size:13.5px;color:var(--mut)"':'')+'><td class="l"'+(ind?' style="padding-left:24px"':'')+'>'+(ind?"↳ ":dot(r.b))+esc(r.n)+'</td><td class="l">'+pp+'</td><td>'+num(r.p)+'</td><td>'+num(r.real)+'</td><td>'+num(r.pct,1)+'%</td><td>'+num(r.fis,1)+'%</td><td>'+num(r.sisa)+'</td><td class="l">'+kp(r)+'</td><td class="l"><span class="pill '+r.s+'">'+SL[r.s]+'</span></td><td class="l">'+dt(r.lm)+'</td></tr>'}
