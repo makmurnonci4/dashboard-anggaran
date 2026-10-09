@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Dashboard Serapan Anggaran</title>
+<title>Dashboard Serapan Anggaran – Dinas Dikpora (Versi Lokal)</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#f2f5f7;--surf:#fff;--ink:#12222c;--mut:#5d6f7b;--line:#dbe3e8;--pri:#0e4b5a;--pri2:#2a8aa0;--ok:#1e7a4c;--warn:#b57a00;--late:#b3261e;--okb:#e2f3ea;--warnb:#fbf0d4;--lateb:#fae3e1;--tick:#12222c}
@@ -90,16 +90,15 @@ td.l,th.l{text-align:left}
   <div>
     <h1>Serapan Anggaran per Bidang</h1>
     <div class="sub"><span id="org"></span> · TA <span id="thn"></span> · posisi s.d. <span id="bln"></span></div>
-    <div class="role" id="role">Memuat data…</div>
+    <div class="role" id="role">Memuat data…</div><div class="sub" style="margin-top:6px">Versi lokal: data tersimpan di peramban perangkat ini. Gunakan Cadangkan data secara berkala.</div>
   </div>
   <div class="ctl">
     <label for="bulan" class="sub" style="margin:0">Posisi bulan</label>
     <select id="bulan"></select>
     <button id="tema" type="button">Tema gelap</button>
-    <button id="cetak" type="button">Cetak</button><button id="keluar" type="button">Keluar</button>
+    <button id="cetak" type="button">Cetak</button><button id="csv" type="button">Unduh CSV</button><button id="exp" type="button">Cadangkan data</button><button id="imp" type="button">Pulihkan data</button><input type="file" id="impf" accept=".json" hidden>
   </div>
 </header>
-<div id="login" class="panel" hidden style="max-width:480px;margin:40px auto;text-align:center"></div>
 <div id="setup" class="panel" hidden></div>
 <div id="main" hidden>
 <section class="band" aria-label="Ringkasan">
@@ -138,49 +137,43 @@ td.l,th.l{text-align:left}
 </div>
 </div>
 
-<script src="firebase-config.js"></script>
 <script>
 (function(){
-window.FBMODE=true;
-var V="10.12.5",PC={},PCt=0;
-function box(html){var el=document.getElementById("login");el.hidden=false;el.innerHTML=html}
-function pend(){return new Promise(function(){})}
-var ready=(async function(){
- var F=window.__FIREBASE_MOCK,C=window.FIREBASE_CONFIG;
- if(!F&&!(C&&C.apiKey&&String(C.apiKey).indexOf("ISI_")!==0)){box('<h2>Konfigurasi Firebase belum diisi</h2><p class="hint">Buka berkas <b>firebase-config.js</b>, tempel nilai firebaseConfig dari konsol Firebase, lalu unggah ulang. Langkah lengkap ada di PANDUAN.md.</p>');return pend()}
- try{
-  if(!F){var u="https://www.gstatic.com/firebasejs/"+V+"/";var a=await import(u+"firebase-app.js"),au=await import(u+"firebase-auth.js"),fs=await import(u+"firebase-firestore.js");F=Object.assign({},a,au,fs)}
- }catch(e){box('<h2>Gagal memuat Firebase</h2><p class="hint">Periksa koneksi internet, lalu muat ulang halaman.</p>');return pend()}
- var app=F.initializeApp(C),auth=F.getAuth(app),fdb=F.getFirestore(app);
- var user=await new Promise(function(res){var done=false;F.onAuthStateChanged(auth,function(u){if(u){if(!done){done=true;res(u)}}else{box('<h2>Dashboard Serapan Anggaran</h2><p class="hint">Masuk dengan akun Google yang emailnya sudah didaftarkan admin.</p><div class="f" style="justify-content:center"><button class="pri" id="gl" type="button">Masuk dengan Google</button></div><div class="msg" id="glm"></div>');document.getElementById("gl").onclick=async function(){try{await F.signInWithPopup(auth,new F.GoogleAuthProvider())}catch(e){if(e&&(e.code=="auth/popup-blocked"||e.code=="auth/operation-not-supported-in-this-environment")){F.signInWithRedirect(auth,new F.GoogleAuthProvider())}else{var m=document.getElementById("glm");m.className="msg e";m.textContent="Gagal masuk: "+((e&&(e.code||e.message))||"tidak diketahui")}}}}})});
- var email=(user.email||"").toLowerCase(),role=null;
- try{var s=await F.getDoc(F.doc(fdb,"akses/"+email));if(s.exists())role=(s.data()||{}).role||"user"}catch(e){}
- if(!role){box('<h2>Akses belum diberikan</h2><p class="hint">Email Anda <b></b> belum terdaftar. Minta admin mendaftarkan email ini, lalu muat ulang halaman.</p><div class="f" style="justify-content:center"><button type="button" id="kl">Keluar</button></div>');document.querySelector("#login b").textContent=email;document.getElementById("kl").onclick=function(){F.signOut(auth).then(function(){location.reload()})};return pend()}
- document.getElementById("login").hidden=true;
- var isAdmin=role=="admin";
- try{await F.setDoc(F.doc(fdb,"users/"+user.uid),{name:user.displayName||email,email:email,t:Date.now()},{merge:true})}catch(e){}
- document.getElementById("keluar").onclick=function(){F.signOut(auth).then(function(){location.reload()})};
- return{F:F,fdb:fdb,user:user,email:email,isAdmin:isAdmin}
-})();
-function wrap(s){return{id:s.id,exists:s.exists(),data:function(){var d=s.data();return d==null?undefined:JSON.parse(JSON.stringify(d))}}}
-function mkdb(c){var F=c.F,fdb=c.fdb;return{
- doc:function(p){var ref=F.doc(fdb,p);return{onSnapshot:function(cb,err){return F.onSnapshot(ref,function(s){cb(wrap(s))},err)},set:function(d){return F.setDoc(ref,JSON.parse(JSON.stringify(d)))},delete:function(){return F.deleteDoc(ref)}}},
- collection:function(n){var ref=F.collection(fdb,n);return{onSnapshot:function(cb,err){return F.onSnapshot(ref,function(s){cb({docs:s.docs.map(wrap)})},err)}}}}}
-function mkuser(c){var F=c.F,fdb=c.fdb;
- async function load(){if(Date.now()-PCt<30000)return;PCt=Date.now();try{var s=await F.getDocs(F.collection(fdb,"users"));s.docs.forEach(function(d){PC[d.id]=d.data()||{}})}catch(e){}}
- return{
- me:async function(){return{id:c.user.uid,name:c.user.displayName||c.email,email:c.email,canEdit:c.isAdmin,isOwner:c.isAdmin}},
- id:async function(){return c.user.uid},
- profiles:async function(ids){ids=[].concat(ids);var o={};await Promise.all(ids.map(async function(i){var p=PC[i];if(!p){try{var s=await F.getDoc(F.doc(fdb,"users/"+i));p=s.exists()?s.data():{}}catch(e){p={}}PC[i]=p}o[i]={id:i,name:p.name||"",email:p.email||null}}));return o},
- search:async function(q){PCt=0;await load();q=q.toLowerCase();return Object.keys(PC).filter(function(i){var p=PC[i]||{};return((p.name||"")+" "+(p.email||"")).toLowerCase().indexOf(q)>=0}).slice(0,8).map(function(i){return{id:i,name:PC[i].name||"",email:PC[i].email||null}})}}}
-window.claude={use:async function(n){var c=await ready;return n=="db"?mkdb(c):n=="user"?mkuser(c):null}};
+var KEY="dikpora-lokal-v1",ST={cfg:null,re:{}},L=[];
+try{var s0=localStorage.getItem(KEY);if(s0)ST=JSON.parse(s0)}catch(e){}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(ST))}catch(e){alert("Penyimpanan peramban diblokir atau penuh. Data tidak tersimpan.")}}
+function snap(id,d){return{id:id,exists:d!=null,data:function(){return d==null?undefined:JSON.parse(JSON.stringify(d))}}}
+function fire(){L.forEach(function(f){f()})}
+var MAP={realisasi:"re",kelola:"kl",permintaan:"rq"};
+function col(n){var k=MAP[n];ST[k]=ST[k]||{};return ST[k]}
+var db={
+ doc:function(p){var a=p.split("/");return{
+  onSnapshot:function(cb){var f=function(){cb(snap(a[1],a[0]=="config"?ST.cfg:col(a[0])[a[1]]))};L.push(f);setTimeout(f,0);return function(){}},
+  set:async function(d){d=JSON.parse(JSON.stringify(d));if(a[0]=="config")ST.cfg=d;else col(a[0])[a[1]]=d;persist();fire()},
+  delete:async function(){if(a[0]=="config")ST.cfg=null;else delete col(a[0])[a[1]];persist();fire()}}},
+ collection:function(n){return{onSnapshot:function(cb){var f=function(){var c=col(n);cb({docs:Object.keys(c).map(function(k){return snap(k,c[k])})})};L.push(f);setTimeout(f,0);return function(){}}}}};
+var user={me:async function(){return{name:"Admin (lokal)",canEdit:true,isOwner:true,id:"local"}},id:async function(){return"local"},
+ profiles:async function(ids){var o={};ids.forEach(function(i){o[i]={id:i,name:i=="local"?"Admin (lokal)":i.replace(/^p:/,"")}});return o},
+ search:async function(q){return[{id:"p:"+q.trim(),name:q.trim(),email:null}]}};
+window.claude={use:async function(n){return n=="db"?db:n=="user"?user:null}};
+function dl(name,text,type){var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type:type}));a.download=name;document.body.appendChild(a);a.click();a.remove()}
+var g=function(i){return document.getElementById(i)};
+g("exp").onclick=function(){dl("cadangan-dashboard-anggaran-"+new Date().toISOString().slice(0,10)+".json",JSON.stringify(ST,null,1),"application/json")};
+g("imp").onclick=function(){g("impf").click()};
+g("impf").onchange=function(){var f=this.files[0],inp=this;if(!f)return;var r=new FileReader();r.onload=function(){try{var d=JSON.parse(r.result);if(!d||!d.cfg||!d.cfg.bidang)throw 0;ST={cfg:d.cfg,re:d.re||{}};persist();fire();alert("Data berhasil dipulihkan.")}catch(e){alert("Berkas cadangan tidak valid.")}inp.value=""};r.readAsText(f)};
+g("csv").onclick=function(){var M=+g("bulan").value,c=ST.cfg;if(!c){alert("Belum ada data.");return}
+ var rows=[["Bidang","Proyek","PPK","Pagu (Rp juta)","Realisasi (Rp juta)","Keuangan (%)","Fisik (%)"]];
+ function nmx(i){return i.replace(/^p:/,"")}
+ c.bidang.forEach(function(b){var us=b.proyek&&b.proyek.length?b.proyek:[b];us.forEach(function(u){var r=0,f=0;for(var m=1;m<=M;m++){var best=null;Object.keys(ST.re).forEach(function(k){var x=((ST.re[k]||{}).e||{})[u.id+"_"+m];if(x&&(!best||x.t>best.t))best=x});if(best){r=best.r;f=best.f}}
+  rows.push([b.name,u===b?"":u.name,(u.ppk||[]).map(nmx).join("; "),u.p||0,r,u.p?(r/u.p*100).toFixed(1):0,f])})});
+ dl("rekap-anggaran-bulan-"+M+".csv","\ufeff"+rows.map(function(x){return x.map(function(v){return'"'+String(v).replace(/"/g,'""')+'"'}).join(";")}).join("\r\n"),"text/csv")};
 })();
 </script>
 <script>
 var BLN=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 var DT=[4,10,18,27,36,46,56,66,76,86,94,100];
 var BASE=[["Sekretariat",18500,1.02,.97],["Bidang PAUD & Pendidikan Nonformal",24200,.93,.9],["Bidang Pembinaan SD",41800,.78,.74],["Bidang Pembinaan SMP",36500,.88,.9],["Bidang GTK",29300,.7,.66],["Bidang Kepemudaan",9800,.96,1],["Bidang Olahraga",14600,.84,.8]];
-var M=Math.min(12,new Date().getMonth()+1),CFG=null,RE={},NAMES={},RQ={},KL={},EM={},myEmail="",AK={},db=null,usr=null,myId=null,myName="",isAdmin=false,IB=null,ready=false;
+var M=Math.min(12,new Date().getMonth()+1),CFG=null,RE={},NAMES={},RQ={},KL={},db=null,usr=null,myId=null,myName="",isAdmin=false,IB=null,ready=false;
 var $=function(i){return document.getElementById(i)};
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function num(v,d){return Number(v).toLocaleString("id-ID",{maximumFractionDigits:d||0,minimumFractionDigits:d||0})}
@@ -188,10 +181,6 @@ function val(a,m){for(var i=m-1;i>=0;i--)if(a[i]!=null)return a[i];return 0}
 function st(g){var a=(CFG&&CFG.th)||[5,15];return g>=-a[0]?"ok":g>=-a[1]?"warn":"late"}
 var SL={none:"Belum ada input",ok:"Sesuai target",warn:"Perlu dipercepat",late:"Terlambat"};
 function nm(u){return NAMES[u]||"Pengguna"}
-function idt(u){return nm(u)+(EM[u]?" · "+EM[u]:"")}
-function who(){var e=myEmail||EM[myId];return"Masuk sebagai <b>"+esc(myName)+"</b>"+(e?" ("+esc(e)+")":"")}
-function kbl(b){return/sekretariat/i.test(b.name)?"Sekretaris":"Kepala Bidang"}
-function kbt(b){return/sekretariat/i.test(b.name)?"Sekretaris "+b.name:"Kepala "+b.name}
 function T(){return CFG.tgt||DT}
 function eff(b){var r=Array(12).fill(null),f=Array(12).fill(null),mt=Array(12).fill(null);
  Object.keys(RE).forEach(function(u){var e=(RE[u]&&RE[u].e)||{};if((CFG.admins||[]).indexOf(u)<0&&(b.ppk||[]).slice(0,1).indexOf(u)<0)return;
@@ -228,13 +217,12 @@ function render(){
  if(!ready)return;
  if(!db){$("role").textContent="Data bersama tidak tersedia. Buka lewat akun claude.ai di organisasi Anda.";return}
  if(!CFG){$("main").hidden=true;$("setup").hidden=false;
-  $("role").innerHTML=who();
+  $("role").innerHTML="Masuk sebagai <b>"+esc(myName)+"</b>";
   $("org").textContent="Belum diatur";$("thn").textContent=new Date().getFullYear();$("bln").textContent=BLN[M-1];
   $("setup").innerHTML=isAdmin?'<h2>Mulai menyiapkan dashboard</h2><p class="hint">Isi identitas instansi. Bidang, proyek, dan PPK ditambahkan setelahnya di Pengaturan.</p><div class="f"><div><label for="so">Nama dinas / instansi</label><input type="text" id="so" style="min-width:300px" placeholder="mis. Dinas Kesehatan"></div><div><label for="st">Tahun anggaran</label><input type="number" id="st" style="width:100px" value="'+new Date().getFullYear()+'"></div><button class="pri" id="s2" type="button">Mulai dengan tampilan kosong</button></div>':'<div class="empty">Dashboard belum disiapkan oleh Kepala Dinas.</div>';
   if(isAdmin){$("s2").onclick=function(){init($("so").value.trim(),parseInt($("st").value))}}
   return}
  $("setup").hidden=true;$("main").hidden=false;
- Object.keys(CFG.em||{}).forEach(function(u){if(!EM[u])EM[u]=CFG.em[u]});Object.keys(KL).forEach(function(k){Object.keys(KL[k].em||{}).forEach(function(u){if(!EM[u])EM[u]=KL[k].em[u]})});
  var tg=T()[M-1],P=0,R=0,F=0,np=0;
  var fb=isAdmin?CFG.bidang:CFG.bidang.filter(isKb),ru=isAdmin?[]:mine().filter(function(y){return fb.indexOf(y.b)<0});
  UL=[];fb.forEach(function(b){units(b).forEach(function(u){UL.push({b:b,u:u})})});ru.forEach(function(y){UL.push(y)});UL.forEach(function(y){y.x=eff(y.u)});
@@ -244,8 +232,8 @@ function render(){
   return{b:b,n:b.name,p:p,real:real,fis:fis,pct:pct,gap:gap,s:nd?"none":st(gap),need:Math.max(0,tg/100*p-real),sisa:p-real,lm:lm,hp:hp,us:us}});
  ru.forEach(function(y){var r=ur(y,tg);r.n=uname(y);r.b=y.b;r.hp=false;r.us=[];rows.push(r)});
  rows.forEach(function(r){P+=r.p;R+=r.real;F+=r.fis*r.p});F=P?F/P:0;var pct=P?R/P*100:0,gap=pct-tg;
- var mi=mine().map(uname),kbn=CFG.bidang.filter(isKb).map(kbt);
- $("role").innerHTML=who()+" · "+(isAdmin?"Pimpinan/admin"+(Object.keys(RQ).length?" · <b>"+Object.keys(RQ).length+" permintaan PPK menunggu persetujuan</b>":""):((kbn.length?esc(kbn.join(", ")):"")+(kbn.length&&mi.length?" · ":"")+(mi.length?"PPK "+esc(mi.join(", ")):"")||"Belum terdaftar"));
+ var mi=mine().map(uname),kbn=CFG.bidang.filter(isKb).map(function(b){return b.name});
+ $("role").innerHTML="Masuk sebagai <b>"+esc(myName)+"</b> · "+(isAdmin?"Pimpinan/admin"+(Object.keys(RQ).length?" · <b>"+Object.keys(RQ).length+" permintaan PPK menunggu persetujuan</b>":""):((kbn.length?"Kepala "+esc(kbn.join(", ")):"")+(kbn.length&&mi.length?" · ":"")+(mi.length?"PPK "+esc(mi.join(", ")):"")||"Belum terdaftar"));
  var priv=!isAdmin&&!mi.length&&!kbn.length;document.querySelectorAll("#main .band,#main .grid,#rekap").forEach(function(el){el.hidden=priv});
  $("chart").parentNode.querySelector(".hint").textContent=isAdmin?"Seluruh bidang, dibandingkan dengan target tiap bulan.":"Bidang dan proyek Anda, dibandingkan dengan target tiap bulan.";
  $("bln").textContent=BLN[M-1]+" "+(CFG.tahun||2026);$("org").textContent=CFG.org||"Dinas Pendidikan, Pemuda dan Olahraga";$("thn").textContent=CFG.tahun||2026;document.title="Dashboard Serapan Anggaran – "+$("org").textContent;var a_=CFG.th||[5,15];document.querySelector(".foot").textContent="Status: Sesuai target bila selisih paling banyak "+a_[0]+" poin di bawah target, Perlu dipercepat bila "+a_[0]+" sampai "+a_[1]+" poin di bawah target, Terlambat bila lebih dari "+a_[1]+" poin di bawah target. Batas dapat diubah admin di bagian Pengaturan.";
@@ -277,13 +265,13 @@ function draw(){
 }
 function opts(role){return role=="kabid"?CFG.bidang.map(function(b){return'<option value="'+esc(b.id)+'">'+esc(b.name)+'</option>'}).join(""):allUnits().map(function(x){return'<option value="'+esc(x.u.id)+'">'+esc(uname(x))+'</option>'}).join("")}
 function reqBox(box){var r=RQ[myId],h='<h2>Pendaftaran</h2>';
- if(r){var isk=r.role=="kabid",q=isk?{b:CFG.bidang.filter(function(x){return x.id==r.b})[0]}:fu(r.b),lab=isk?(q.b?kbt(q.b):"(sudah dihapus)"):(q?"PPK "+uname(q):"(sudah dihapus)"),rej=!isk&&q&&rejected(q.b,myId,r.t);
+ if(r){var isk=r.role=="kabid",q=isk?{b:CFG.bidang.filter(function(x){return x.id==r.b})[0]}:fu(r.b),lab=isk?(q.b?"Kepala "+q.b.name:"(sudah dihapus)"):(q?"PPK "+uname(q):"(sudah dihapus)"),rej=!isk&&q&&rejected(q.b,myId,r.t);
   h+=rej?'<p class="hint">Permintaan Anda sebagai <b>'+esc(lab)+'</b> ditolak Kepala Bidang. Hapus permintaan ini bila ingin mengajukan ulang.</p><div class="f"><button type="button" id="rqc">Hapus permintaan</button></div>':'<p class="hint">Permintaan Anda sebagai <b>'+esc(lab)+'</b> menunggu persetujuan '+(isk?"admin":"Kepala Bidang atau admin")+'.</p><div class="f"><button type="button" id="rqc">Batalkan permintaan</button></div>'}
- else{h+='<p class="hint">Nama Anda (<b>'+esc(myName)+'</b>) diambil otomatis dari akun. Isi email agar admin mudah mengenali Anda.</p><p class="hint">Akun Anda belum terdaftar. Pilih peran dan tujuan Anda, lalu ajukan. Permintaan Kepala Bidang disetujui admin, permintaan PPK disetujui Kepala Bidang atau admin.</p><div class="f"><div><label for="rqr">Daftar sebagai</label><select id="rqr"><option value="ppk">PPK</option><option value="kabid">Kepala Bidang / Sekretaris</option></select></div><div><label for="rqb">Bidang / proyek</label><select id="rqb">'+opts("ppk")+'</select></div><div><label for="rqe">Email Anda</label><input type="email" id="rqe"'+(myEmail?' readonly':'')+' value="'+esc(myEmail)+'" placeholder="nama@instansi.go.id"></div><button class="pri" type="button" id="rqs">Ajukan</button></div>'}
+ else{h+='<p class="hint">Akun Anda belum terdaftar. Pilih peran dan tujuan Anda, lalu ajukan. Permintaan Kepala Bidang disetujui admin, permintaan PPK disetujui Kepala Bidang atau admin.</p><div class="f"><div><label for="rqr">Daftar sebagai</label><select id="rqr"><option value="ppk">PPK</option><option value="kabid">Kepala Bidang</option></select></div><div><label for="rqb">Bidang / proyek</label><select id="rqb">'+opts("ppk")+'</select></div><button class="pri" type="button" id="rqs">Ajukan</button></div>'}
  h+='<div class="msg" id="rqm"></div>';box.innerHTML=h;
  var s=$("rqs"),c=$("rqc");
  if($("rqr"))$("rqr").onchange=function(){$("rqb").innerHTML=opts(this.value)};
- if(s)s.onclick=async function(){try{await db.doc("permintaan/"+myId).set({role:$("rqr").value,b:$("rqb").value,t:Date.now(),e:($("rqe").value||"").trim().slice(0,120),n:myName});s.blur();toast("Permintaan terkirim.");setTimeout(function(){renderInput(true)},400)}catch(e){$("rqm").className="msg e";$("rqm").textContent="Gagal mengirim. Pastikan akses Anda minimal Kontributor."}};
+ if(s)s.onclick=async function(){try{await db.doc("permintaan/"+myId).set({role:$("rqr").value,b:$("rqb").value,t:Date.now()});s.blur();toast("Permintaan terkirim.");setTimeout(function(){renderInput(true)},400)}catch(e){$("rqm").className="msg e";$("rqm").textContent="Gagal mengirim. Pastikan akses Anda minimal Kontributor."}};
  if(c)c.onclick=async function(){try{await db.doc("permintaan/"+myId).delete();c.blur();toast("Permintaan dihapus");setTimeout(function(){renderInput(true)},400)}catch(e){toast("Gagal menghapus",true)}}}
 function cleanReq(){var r=RQ[myId];if(!r||cleanReq._d)return;var ok=false;
  if(r.role=="kabid"){ok=CFG.bidang.some(function(b){return b.id==r.b&&isKb(b)})}else{var q=fu(r.b);ok=!!q&&(q.u.ppk||[]).slice(0,1).indexOf(myId)>=0}
@@ -312,13 +300,13 @@ function renderInput(force){
 function rqBlock(){var ids=Object.keys(RQ),h='<div class="sb"><h2 style="font-size:15px">Permintaan pendaftaran</h2>';
  if(!ids.length)return h+'<p class="hint">Tidak ada permintaan yang menunggu.</p></div>';
  ids.forEach(function(u){var r=RQ[u],t;
-  if(r.role=="kabid"){var b=CFG.bidang.filter(function(x){return x.id==r.b})[0];t=esc(b?kbt(b):"Kepala Bidang (sudah dihapus)")+(b&&kb(b)?' · sudah punya Kepala Bidang, cabut dulu':'')}
+  if(r.role=="kabid"){var b=CFG.bidang.filter(function(x){return x.id==r.b})[0];t='Kepala Bidang '+esc(b?b.name:"(sudah dihapus)")+(b&&kb(b)?' · sudah punya Kepala Bidang, cabut dulu':'')}
   else{var q=fu(r.b);t='PPK '+esc(q?uname(q):"(sudah dihapus)")+(q&&(q.u.ppk||[]).length?' · sudah punya PPK, cabut dulu':'')+(q&&rejected(q.b,u,r.t)?' · ditolak Kepala Bidang':'')}
-  h+='<div class="f"><div><b>'+esc(nm(u))+'</b>'+(EM[u]||r.e?' <span class="sub">'+esc(EM[u]||r.e)+'</span>':'')+'<div class="sub">meminta menjadi '+t+'</div></div><button class="pri" type="button" data-ok="'+esc(u)+'">Setujui</button><button type="button" data-no="'+esc(u)+'">Tolak</button></div>'});
+  h+='<div class="f"><div><b>'+esc(nm(u))+'</b><div class="sub">meminta menjadi '+t+'</div></div><button class="pri" type="button" data-ok="'+esc(u)+'">Setujui</button><button type="button" data-no="'+esc(u)+'">Tolak</button></div>'});
  return h+'</div>'}
 function rqKb(b){var ids=Object.keys(RQ).filter(function(u){var r=RQ[u];if(r.role=="kabid")return false;var q=fu(r.b);return q&&q.b===b&&!(q.u.ppk||[]).length&&!rejected(b,u,r.t)});
  if(!ids.length)return'<p class="hint">Tidak ada permintaan PPK yang menunggu.</p>';
- return ids.map(function(u){var q=fu(RQ[u].b);return'<div class="f"><div><b>'+esc(nm(u))+'</b>'+(EM[u]||RQ[u].e?' <span class="sub">'+esc(EM[u]||RQ[u].e)+'</span>':'')+'<div class="sub">meminta menjadi PPK '+esc(uname(q))+'</div></div><button class="pri" type="button" data-ok="'+esc(u)+'">Setujui</button><button type="button" data-kno="'+esc(u)+'">Tolak</button></div>'}).join("")}
+ return ids.map(function(u){var q=fu(RQ[u].b);return'<div class="f"><div><b>'+esc(nm(u))+'</b><div class="sub">meminta menjadi PPK '+esc(uname(q))+'</div></div><button class="pri" type="button" data-ok="'+esc(u)+'">Setujui</button><button type="button" data-kno="'+esc(u)+'">Tolak</button></div>'}).join("")}
 function renderKb(){var box=$("kb"),L=isAdmin?[]:CFG.bidang.filter(isKb);box.hidden=!L.length;if(!L.length)return;
  if(box.contains(document.activeElement)&&document.activeElement!==box)return;
  var h='<h2>Kelola proyek dan PPK bidang Anda</h2><p class="hint">Tambahkan proyek, atur pagunya, serta setujui atau daftarkan PPK tiap proyek. Setiap PPK hanya melihat proyeknya sendiri.</p>';
@@ -331,28 +319,24 @@ async function approve(u){var r=RQ[u];if(!r)return;
   if(!b){toast("Bidang tidak ditemukan",true);return}
   if(kb(b)){toast("Bidang ini sudah memiliki Kepala Bidang. Cabut dulu.",true);return}
   if(CFG.bidang.some(function(x){return kb(x)==u})){toast("Orang ini sudah menjadi Kepala Bidang di bidang lain.",true);return}
-  var em0=(r.e||"").trim();if(em0){CFG.em=CFG.em||{};CFG.em[u]=em0}await setKb(b,u);try{await db.doc("permintaan/"+u).delete()}catch(e){}return}
+  await setKb(b,u);try{await db.doc("permintaan/"+u).delete()}catch(e){}return}
  var q=fu(r.b);if(!q||!canB(q.b)){toast("Bidang atau proyek tidak ditemukan",true);return}
  if((q.u.ppk||[]).length){toast("Sudah memiliki PPK. Cabut dulu PPK tersebut.",true);return}
- var em1=(r.e||"").trim();if(em1){if(isAdmin){CFG.em=CFG.em||{};CFG.em[u]=em1}else{var hh=hold(q.b);hh.em=hh.em||{};hh.em[u]=em1}}
- q.u.ppk=[u];await persU(q);if(isAdmin&&em1)await saveCFG();try{await db.doc("permintaan/"+u).delete()}catch(e){}}
+ q.u.ppk=[u];await persU(q);try{await db.doc("permintaan/"+u).delete()}catch(e){}}
 function catBlock(){var a=CFG.th||[5,15],t=T();
  var h='<div class="sb"><h2 style="font-size:15px">Kategori status</h2><p class="hint">Status dihitung dari selisih persentase realisasi keuangan terhadap target bulan yang dipilih.</p><div class="f"><div><label>Sesuai target jika selisih paling banyak (poin)</label><input type="number" min="0" step="0.5" data-th="0" value="'+a[0]+'"></div><div><label>Perlu dipercepat jika selisih sampai (poin)</label><input type="number" min="0" step="0.5" data-th="1" value="'+a[1]+'"></div></div><p class="hint">Selisih di luar batas kedua dianggap Terlambat.</p>';
  h+='<h2 style="font-size:15px;margin-top:10px">Target serapan kumulatif per bulan (%)</h2><div class="f">';
  for(var i=0;i<12;i++)h+='<div><label>'+BLN[i].slice(0,3)+'</label><input style="width:76px" type="number" min="0" max="100" step="0.1" data-tg="'+i+'" value="'+t[i]+'"></div>';
  return h+'</div></div>'}
-function akBlock(){if(!window.FBMODE)return"";var ks=Object.keys(AK).sort(),h='<div class="sb"><h2 style="font-size:15px">Akses pengguna</h2><p class="hint">Hanya email yang terdaftar di sini yang bisa membuka dashboard. Daftarkan email akun Google semua admin, Kepala Bidang, dan PPK.</p>';
- ks.forEach(function(e){h+='<div class="f"><div><b>'+esc(e)+'</b><div class="sub">'+(AK[e].role=="admin"?"Admin":"Pengguna")+'</div></div><button type="button" data-ake="'+esc(e)+'">Hapus akses</button></div>'});
- return h+'<div class="f"><div><label for="ake">Email</label><input type="email" id="ake" placeholder="nama@gmail.com"></div><div><label for="akr">Peran</label><select id="akr"><option value="user">Pengguna</option><option value="admin">Admin</option></select></div><button class="pri" type="button" id="aka">Tambahkan</button></div></div>'}
 function idBlock(){return'<div class="sb"><h2 style="font-size:15px">Identitas instansi</h2><div class="f"><div><label>Nama dinas / instansi</label><input type="text" style="min-width:320px" data-org="1" value="'+esc(CFG.org||"Dinas Pendidikan, Pemuda dan Olahraga")+'"></div><div><label>Tahun anggaran</label><input type="number" style="width:100px" data-thn="1" value="'+(CFG.tahun||2026)+'"></div></div></div>'}
-function kbh(b){var k=kb(b);return'<div>'+kbl(b)+': '+(k?'<span class="chip">'+esc(idt(k))+'<button type="button" aria-label="Cabut Kepala Bidang" data-rmk="'+esc(b.id)+'">×</button></span>':'<span class="sub">belum ada</span>')+'</div>'+(k?'':'<div class="f"><div><label>Tambah '+kbl(b)+'</label><input type="text" placeholder="Cari nama atau email" data-qk="'+esc(b.id)+'"><div class="res"></div></div></div>')}
-function pplk(u){var id=u.id,h='<div>PPK: '+((u.ppk||[]).map(function(x){return'<span class="chip">'+esc(idt(x))+'<button type="button" aria-label="Cabut PPK" data-rm="'+esc(id)+'|'+esc(x)+'">×</button></span>'}).join("")||'<span class="sub">belum ada</span>')+'</div>';
+function kbh(b){var k=kb(b);return'<div>Kepala Bidang: '+(k?'<span class="chip">'+esc(nm(k))+'<button type="button" aria-label="Cabut Kepala Bidang" data-rmk="'+esc(b.id)+'">×</button></span>':'<span class="sub">belum ada</span>')+'</div>'+(k?'':'<div class="f"><div><label>Tambah Kepala Bidang</label><input type="text" placeholder="Cari nama atau email" data-qk="'+esc(b.id)+'"><div class="res"></div></div></div>')}
+function pplk(u){var id=u.id,h='<div>PPK: '+((u.ppk||[]).map(function(x){return'<span class="chip">'+esc(nm(x))+'<button type="button" aria-label="Cabut PPK" data-rm="'+esc(id)+'|'+esc(x)+'">×</button></span>'}).join("")||'<span class="sub">belum ada</span>')+'</div>';
  return h+((u.ppk||[]).length?'<div class="msg">Sudah memiliki PPK. Untuk menggantinya, cabut dulu dengan tombol ×.</div>':'<div class="f"><div><label>Tambah PPK</label><input type="text" placeholder="Cari nama atau email" data-q="'+esc(id)+'"><div class="res"></div></div></div>')}
 function uf(u,pj,nc){return'<div class="f">'+(pj?'<div><label>Nama proyek</label><input type="text" style="min-width:240px" data-n="'+esc(u.id)+'" value="'+esc(u.name)+'"></div>':'')+'<div><label>Pagu'+(pj?' proyek':' bidang')+' (Rp juta)</label><input type="number" min="0" data-p="'+esc(u.id)+'" placeholder="0" value="'+(u.p||"")+'"></div>'+(pj?(nc?'':'<button type="button" data-clr="'+esc(u.id)+'">Kosongkan realisasi</button>')+'<button type="button" data-del="'+esc(u.id)+'">Hapus proyek</button>':'')+'</div>'+pplk(u)}
 function renderSet(){
  var box=$("set");box.hidden=!isAdmin;if(!isAdmin)return;
  if(box.contains(document.activeElement)&&document.activeElement!==box)return;
- var h='<h2>Pengaturan bidang, proyek, dan PPK</h2><p class="hint">Ubah nama dan pagu bidang, tunjuk Kepala Bidang, tambahkan proyek bila satu bidang punya beberapa proyek dengan PPK berbeda, lalu daftarkan PPK. Pastikan semua pengguna sudah diberi akses Kontributor pada dashboard ini.</p>'+idBlock()+akBlock()+rqBlock()+catBlock();
+ var h='<h2>Pengaturan bidang, proyek, dan PPK</h2><p class="hint">Ubah nama dan pagu bidang, tunjuk Kepala Bidang, tambahkan proyek bila satu bidang punya beberapa proyek dengan PPK berbeda, lalu daftarkan PPK. Pastikan semua pengguna sudah diberi akses Kontributor pada dashboard ini.</p>'+idBlock()+rqBlock()+catBlock();
  CFG.bidang.forEach(function(b){var l=plist(b),hp=l.length>0;
   h+='<div class="sb"><div class="f"><div><label>Nama bidang</label><input type="text" style="min-width:260px" data-bn="'+esc(b.id)+'" value="'+esc(b.name)+'"></div>'+(hp?'<div><label>Pagu bidang (jumlah proyek, Rp juta)</label><input type="text" disabled value="'+num(bp(b))+'"></div>':'')+'<button type="button" data-bclr="'+esc(b.id)+'">Kosongkan realisasi bidang</button><button type="button" data-bdel="'+esc(b.id)+'">Hapus bidang</button></div>'+kbh(b);
   if(hp){l.forEach(function(p){h+='<div style="margin:6px 0 10px 18px;padding-left:14px;border-left:3px solid var(--line)">'+uf(p,true)+'</div>'})}else h+=uf(b,false);
@@ -377,8 +361,6 @@ function onClick(e){var t=e.target.closest("button");if(!t)return;var r,b0,a,hd;
   if(t.dataset.clr&&arm(t,"Klik lagi untuk mengosongkan"))clr([t.dataset.clr]);
   if(t.dataset.bclr&&arm(t,"Klik lagi untuk mengosongkan")){b0=CFG.bidang.filter(function(x){return x.id==t.dataset.bclr})[0];if(b0)clr(units(b0).map(function(u){return u.id}))}
   if(t.dataset.no){t.blur();db.doc("permintaan/"+t.dataset.no).delete().then(function(){toast("Permintaan ditolak dan dihapus")},function(){toast("Gagal menolak permintaan",true)});return}
-  if(t.id=="aka"){var em=($("ake").value||"").trim().toLowerCase();if(!/^\S+@\S+\.\S+$/.test(em)){toast("Email tidak valid",true);return}t.blur();db.doc("akses/"+em).set({role:$("akr").value}).then(function(){toast("Akses ditambahkan")},function(){toast("Gagal menambahkan akses",true)});return}
-  if(t.dataset.ake&&arm(t,"Klik lagi untuk menghapus")){if(t.dataset.ake==myEmail){toast("Akses Anda sendiri tidak bisa dihapus",true);return}t.blur();db.doc("akses/"+t.dataset.ake).delete().then(function(){toast("Akses dihapus")},function(){toast("Gagal menghapus akses",true)});return}
   if(t.id=="addb"){CFG.bidang.push({id:"b"+Date.now().toString(36),name:"Bidang baru",p:0,ppk:[]});saveCFG()}
   if(t.dataset.bdel&&arm(t,"Klik lagi untuk menghapus bidang")){CFG.bidang=CFG.bidang.filter(function(x){return x.id!=t.dataset.bdel});saveCFG()}
   if(t.dataset.rmk&&arm(t,"Klik lagi untuk mencabut")){b0=CFG.bidang.filter(function(x){return x.id==t.dataset.rmk})[0];if(b0)unKb(b0)}
@@ -400,7 +382,7 @@ async function onInput(e){var t=e.target,k=!!t.dataset.qk;if(!t.dataset.q&&!k)re
 ["set","kb"].forEach(function(i){var el=$(i);el.addEventListener("change",onChange);el.addEventListener("click",onClick);el.addEventListener("input",onInput)});
 async function need(){var ids={};(CFG.admins||[]).forEach(function(u){ids[u]=1});CFG.bidang.forEach(function(b){(b.kabid||[]).forEach(function(u){ids[u]=1})});allUnits().forEach(function(x){(x.u.ppk||[]).forEach(function(u){ids[u]=1})});Object.keys(RE).forEach(function(u){ids[u]=1});Object.keys(RQ).forEach(function(u){ids[u]=1});Object.keys(KL).forEach(function(u){ids[u]=1});
  var n=Object.keys(ids).filter(function(u){return!(u in NAMES)});if(!n.length)return;n.forEach(function(u){NAMES[u]=""});
- try{var ps=await usr.profiles(n);n.forEach(function(u){NAMES[u]=(ps[u]&&ps[u].name)||"";EM[u]=(ps[u]&&ps[u].email)||""})}catch(e){}render()}
+ try{var ps=await usr.profiles(n);n.forEach(function(u){NAMES[u]=(ps[u]&&ps[u].name)||""})}catch(e){}render()}
 async function init(org,thn){
  CFG={org:org||"Dinas / instansi",tahun:thn>=2000?thn:new Date().getFullYear(),bidang:[{id:"b1",name:"Bidang 1",p:0,ppk:[]}],tgt:DT,admins:[myId]};
  await saveCFG();
@@ -411,13 +393,12 @@ $("cetak").onclick=function(){window.print()};
 var tm=$("tema");tm.onclick=function(){var d=document.documentElement,dark=d.getAttribute("data-theme")==="dark"||(!d.getAttribute("data-theme")&&matchMedia("(prefers-color-scheme:dark)").matches);d.setAttribute("data-theme",dark?"light":"dark");tm.textContent=dark?"Tema gelap":"Tema terang"};
 (async function(){
  try{usr=await window.claude.use("user");db=await window.claude.use("db")}catch(e){}
- if(usr&&db){try{var me=await usr.me();myId=await usr.id();myName=me.name||"Pengguna";isAdmin=!!me.canEdit;NAMES[myId]=myName;myEmail=me.email||"";EM[myId]=myEmail}catch(e){db=null}}
+ if(usr&&db){try{var me=await usr.me();myId=await usr.id();myName=me.name||"Pengguna";isAdmin=!!me.canEdit;NAMES[myId]=myName}catch(e){db=null}}
  ready=true;
  if(!db){render();return}
  db.doc("config/main").onSnapshot(function(s){CFG=s.exists?JSON.parse(JSON.stringify(s.data())):null;
   if(CFG&&isAdmin&&(CFG.admins||[]).indexOf(myId)<0){CFG.admins=(CFG.admins||[]).concat(myId);saveCFG()}render()},function(){db=null;render()});
  db.collection("realisasi").onSnapshot(function(s){RE={};s.docs.forEach(function(d){RE[d.id]=JSON.parse(JSON.stringify(d.data()))});render()},function(){});
- if(window.FBMODE&&isAdmin)db.collection("akses").onSnapshot(function(s){AK={};s.docs.forEach(function(d){AK[d.id]=d.data()});render()},function(){});
  db.collection("kelola").onSnapshot(function(s){KL={};s.docs.forEach(function(d){KL[d.id]=JSON.parse(JSON.stringify(d.data()))});render()},function(){});
  db.collection("permintaan").onSnapshot(function(s){RQ={};s.docs.forEach(function(d){RQ[d.id]=JSON.parse(JSON.stringify(d.data()))});render()},function(){});
 })();
