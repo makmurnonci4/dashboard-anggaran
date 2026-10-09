@@ -323,8 +323,12 @@ function renderInput(force){
   $("ib").onchange=function(){IB=this.value;renderInput(true)};
   $("icl").onclick=function(){var bt=this;if(!arm(bt,"Klik lagi untuk mengosongkan"))return;bt.blur();clrMonth(au.u.id,M)};
   return}
+ box.hidden=false;
  var L=mine();
- if(!L.length){reqBox(box);return}
+ if(!L.length){
+  if(CFG.bidang.some(isKb)){box.hidden=true;box.innerHTML='';return}
+  if(RQ[myId]){reqBox(box);return}
+  box.innerHTML='<h2>Jabatan belum ditetapkan</h2><p class="hint">Email Anda sudah terdaftar, tetapi belum ditetapkan sebagai Kepala Bidang atau PPK. Hubungi admin untuk menetapkan jabatan Anda.</p>';return}
  if(!IB||!L.some(function(o){return o.u.id==IB}))IB=L[0].u.id;
  var u=L.filter(function(o){return o.u.id==IB})[0].u,x=UL.filter(function(y){return y.u===u})[0].x,prev=M>1?val(x.r,M-1):0,pf=M>1?val(x.f,M-1):0,cr=x.r[M-1],cf=x.f[M-1];
  box.innerHTML='<h2>Input realisasi '+BLN[M-1]+'</h2><p class="hint">Isi angka kumulatif sejak Januari sampai akhir '+BLN[M-1]+'. Bulan sebelumnya: Rp '+num(prev)+' juta, fisik '+num(pf,1)+'%.</p><div class="f">'+
@@ -376,10 +380,12 @@ function catBlock(){var a=CFG.th||[5,15],t=T();
  return h+'</div></div>'}
 function pdWant(r){var b=CFG.bidang.filter(function(x){return x.id==r.b})[0];
  if(r.role=="kabid")return b?(kb(b)?kbt(b)+" (sudah terisi)":kbt(b)):"Kepala Bidang (bidang sudah dihapus)";
- if(r.role=="ppk")return b?"PPK "+b.name+(plist(b).length?" (pilih proyeknya di Pengaturan)":((b.ppk||[]).length?" (sudah terisi)":"")):"PPK (bidang sudah dihapus)";return""}
+ if(r.role=="ppk")return b?"PPK "+b.name+(plist(b).length?" (pilih proyek di samping)":((b.ppk||[]).length?" (sudah terisi)":"")):"PPK (bidang sudah dihapus)";return""}
 function pdBlock(){var ids=Object.keys(PD).filter(function(u){return!AK[PD[u].email]});if(!ids.length)return'';
  return'<div class="sb" id="pdb"><h2 style="font-size:15px">Login menunggu akses</h2><p class="hint">Akun Google berikut sudah mencoba masuk tetapi emailnya belum terdaftar. Periksa dulu bahwa orangnya memang berhak.</p>'+ids.map(function(u){var r=PD[u],w=r.role?pdWant(r):"";
-  return'<div class="f"><div><b>'+esc(r.name||r.email)+'</b> <span class="sub">'+esc(r.email)+'</span><div class="sub">'+(w?'meminta menjadi '+esc(w):'belum memilih jabatan')+'</div></div>'+(w?'<button class="pri" type="button" data-pdok="'+esc(u)+'">Setujui sebagai '+(r.role=="kabid"?'Kepala Bidang':'PPK')+'</button><button type="button" data-pdonly="'+esc(u)+'">Akses saja</button>':'<button class="pri" type="button" data-pdonly="'+esc(u)+'">Beri akses Pengguna</button>')+'<button type="button" data-pdadm="'+esc(u)+'">Jadikan Admin</button><button type="button" data-pdno="'+esc(u)+'">Tolak</button></div>'}).join("")+'</div>'}
+  var pb=r.role=="ppk"?CFG.bidang.filter(function(x){return x.id==r.b})[0]:null,ps="";
+  if(pb&&plist(pb).length){var fr=plist(pb).filter(function(q){return!(q.ppk||[]).length});ps=fr.length?'<div><label>Proyek</label><select data-pdp="'+esc(u)+'"><option value="">Pilih proyek…</option>'+fr.map(function(q){return'<option value="'+esc(q.id)+'">'+esc(q.name)+'</option>'}).join("")+'</select></div>':'<div class="sub">semua proyek sudah punya PPK</div>'}
+  return'<div class="f"><div><b>'+esc(r.name||r.email)+'</b> <span class="sub">'+esc(r.email)+'</span><div class="sub">'+(w?'meminta menjadi '+esc(w):'belum memilih jabatan')+'</div></div>'+ps+(w?'<button class="pri" type="button" data-pdok="'+esc(u)+'">Setujui sebagai '+(r.role=="kabid"?'Kepala Bidang':'PPK')+'</button><button type="button" data-pdonly="'+esc(u)+'">Akses saja</button>':'<button class="pri" type="button" data-pdonly="'+esc(u)+'">Beri akses Pengguna</button>')+'<button type="button" data-pdadm="'+esc(u)+'">Jadikan Admin</button><button type="button" data-pdno="'+esc(u)+'">Tolak</button></div>'}).join("")+'</div>'}
 document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("#pdgo");if(!a)return;e.preventDefault();var el=$("pdb");if(!el){var st=$("set");if(st)st.scrollIntoView({behavior:"smooth",block:"start"});return}
  el.scrollIntoView({behavior:"smooth",block:"center"});var o=el.style.cssText;el.style.transition="background .4s";el.style.background="var(--warnb)";setTimeout(function(){el.style.background=""},1800)});
 function pdNote(){var n=Object.keys(PD).filter(function(u){return!AK[PD[u].email]}).length,el=$("pdn");if(!el)return;el.hidden=!(isAdmin&&n);if(isAdmin&&n)el.innerHTML='<b>'+n+' akun menunggu akses.</b> <a href="#pdb" id="pdgo">Klik di sini</a> untuk menyetujui.'}
@@ -418,11 +424,11 @@ async function clr(ids){try{var ks=Object.keys(RE);for(var i=0;i<ks.length;i++){
 function onClick(e){var t=e.target.closest("button");if(!t)return;var r,b0,a,hd;
  if(isAdmin){
   if(t.dataset.pdok||t.dataset.pdonly||t.dataset.pdadm){var pu=t.dataset.pdok||t.dataset.pdonly||t.dataset.pdadm,pd=PD[pu],pr=t.dataset.pdadm?"admin":"user",wr=!!t.dataset.pdok;
-   if(pd){t.blur();(async function(){try{await db.doc("akses/"+pd.email).set({role:pr})}catch(e){toast("Gagal memberi akses",true);return}
-    var bd=CFG.bidang.filter(function(x){return x.id==pd.b})[0];
-    if(wr&&pd.role=="ppk"&&bd&&plist(bd).length){toast("Akses diberikan. Bidang ini punya proyek, jadi tunjuk PPK-nya per proyek di Pengaturan.")}
-    else if(wr&&pd.role){RQ[pu]={role:pd.role,b:pd.b,e:pd.email,t:Date.now()};try{await approve(pu)}catch(e){toast("Akses diberikan, tetapi jabatan gagal diatur. Atur manual di Pengaturan.",true)}}
-    try{await db.doc("pendaftar/"+pu).delete()}catch(e){}if(!(wr&&pd.role=="ppk"&&bd&&plist(bd).length))toast("Akses diberikan kepada "+pd.email)})()}return}
+   if(pd){var bd=CFG.bidang.filter(function(x){return x.id==pd.b})[0],tg2=pd.b;
+    if(wr&&pd.role=="ppk"&&bd&&plist(bd).length){var sl=document.querySelector('select[data-pdp="'+pu+'"]');tg2=sl?sl.value:"";if(!tg2){toast("Pilih proyek untuk PPK ini dulu",true);return}}
+    t.blur();(async function(){try{await db.doc("akses/"+pd.email).set({role:pr})}catch(e){toast("Gagal memberi akses",true);return}
+     if(wr&&pd.role){RQ[pu]={role:pd.role,b:tg2,e:pd.email,t:Date.now()};try{await approve(pu)}catch(e){toast("Akses diberikan, tetapi jabatan gagal diatur. Atur manual di Pengaturan.",true)}}
+     try{await db.doc("pendaftar/"+pu).delete()}catch(e){}toast("Disetujui: "+pd.email+(wr&&pd.role?(pd.role=="kabid"?" menjadi Kepala Bidang":" menjadi PPK"):""))})()}return}
   if(t.dataset.pdno){t.blur();db.doc("pendaftar/"+t.dataset.pdno).delete().then(function(){toast("Permintaan ditolak")},function(){toast("Gagal menolak",true)});return}
   if(t.id=="clrall"&&arm(t,"Klik lagi untuk menghapus SEMUA data"))clr(null);
   if(t.dataset.clr&&arm(t,"Klik lagi untuk mengosongkan"))clr([t.dataset.clr]);
