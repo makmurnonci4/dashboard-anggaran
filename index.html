@@ -135,6 +135,14 @@ td.l,th.l{text-align:left}
   </table></div>
   <p class="foot">Status: Sesuai target bila selisih ≥ −5 poin, Perlu dipercepat bila −5 sampai −15 poin, Terlambat bila di bawah −15 poin.</p>
 </section>
+<section class="panel" id="ppkrank" style="margin-bottom:18px">
+  <h2>Daya serap per PPK</h2>
+  <p class="hint">Setiap PPK dinilai dari persentase daya serapnya dan selisihnya terhadap target bulan ini, bukan dari besar pagu. Diurutkan dari daya serap tertinggi.</p>
+  <div class="scroll"><table>
+    <thead><tr><th class="l">No</th><th class="l">PPK</th><th class="l">Bidang / proyek</th><th>Daya serap keuangan</th><th>Fisik</th><th>Selisih target</th><th class="l">Status</th><th class="l">Diperbarui</th></tr></thead>
+    <tbody id="pr"></tbody>
+  </table></div>
+</section>
 <section class="panel" id="set" hidden></section>
 </div>
 </div>
@@ -242,6 +250,10 @@ var LOP="";
 function pubOpsi(){if(!db||!CFG||!(CFG.bidang||[]).length)return;if(!(isAdmin||CFG.bidang.some(isKb)))return;
  var o={bidang:CFG.bidang.map(function(b){return{id:b.id,name:b.name,kl:kbl(b),kt:!!kb(b),units:units(b).map(function(u){return{id:u.id,name:u.name,pt:!!(u.ppk||[]).length}})}})},z=JSON.stringify(o);
  if(z===LOP)return;LOP=z;o.t=Date.now();db.doc("opsi/main").set(o).catch(function(){})}
+function ppkRank(tg){var rs=UL.map(function(y){var r=ur(y,tg);r.y=y;return r}).sort(function(a,b){if(a.nd!=b.nd)return a.nd?1:-1;return b.pct-a.pct}),n=0;
+ if(!rs.length)return'<tr><td class="l" colspan="8">Belum ada PPK.</td></tr>';
+ return rs.map(function(r){var no=r.nd?"–":++n,pp=(r.y.u.ppk||[]).length?ppkh(r.y.u):'<span class="sub">belum ada PPK</span>',pc=Math.min(100,r.pct);
+  return'<tr><td class="l">'+no+'</td><td class="l"><b>'+pp+'</b></td><td class="l">'+dot(r.y.b)+esc(uname(r.y))+'</td><td><span style="display:inline-block;width:80px;height:8px;border-radius:5px;background:var(--bg);border:1px solid var(--line);vertical-align:middle;margin-right:8px;overflow:hidden"><span style="display:block;height:100%;width:'+pc+'%;background:'+bcol(r.y.b)+'"></span></span><b>'+num(r.pct,1)+'%</b></td><td>'+num(r.fis,1)+'%</td><td>'+(r.nd?"–":(r.gap>=0?"+":"")+num(r.gap,1)+" poin")+'</td><td class="l"><span class="pill '+r.s+'">'+SL[r.s]+'</span></td><td class="l">'+dt(r.lm)+'</td></tr>'}).join("")}
 function render(){
  if(!ready)return;
  try{pubOpsi()}catch(e){}
@@ -265,7 +277,7 @@ function render(){
  rows.forEach(function(r){P+=r.p;R+=r.real;F+=r.fis*r.p});F=P?F/P:0;var pct=P?R/P*100:0,gap=pct-tg;
  var mi=mine().map(uname),kbn=CFG.bidang.filter(isKb).map(kbt);
  $("role").innerHTML=who()+" · "+(isAdmin?"Pimpinan/admin"+(Object.keys(RQ).length?" · <b>"+Object.keys(RQ).length+" permintaan PPK menunggu persetujuan</b>":""):((kbn.length?esc(kbn.join(", ")):"")+(kbn.length&&mi.length?" · ":"")+(mi.length?"PPK "+esc(mi.join(", ")):"")||"Belum terdaftar"));
- var priv=!isAdmin&&!mi.length&&!kbn.length;document.querySelectorAll("#main .band,#main .grid,#rekap").forEach(function(el){el.hidden=priv});
+ var priv=!isAdmin&&!mi.length&&!kbn.length;document.querySelectorAll("#main .band,#main .grid,#rekap,#ppkrank").forEach(function(el){el.hidden=priv});
  $("chart").parentNode.querySelector(".hint").textContent=isAdmin?"Seluruh bidang, dibandingkan dengan target tiap bulan.":"Bidang dan proyek Anda, dibandingkan dengan target tiap bulan.";
  $("bln").textContent=BLN[M-1]+" "+(CFG.tahun||2026);$("org").textContent=CFG.org||"Dinas Pendidikan, Pemuda dan Olahraga";$("thn").textContent=CFG.tahun||2026;document.title="Dashboard Serapan Anggaran – "+$("org").textContent;var a_=CFG.th||[5,15];document.querySelector(".foot").textContent="Status: Sesuai target bila selisih paling banyak "+a_[0]+" poin di bawah target, Perlu dipercepat bila "+a_[0]+" sampai "+a_[1]+" poin di bawah target, Terlambat bila lebih dari "+a_[1]+" poin di bawah target. Batas dapat diubah admin di bagian Pengaturan.";
  $("k1").textContent="Rp "+num(P/1000,1)+" M";$("k1n").textContent=isAdmin?rows.length+" bidang"+(np?" · "+np+" proyek":""):rows.length+" bidang/proyek Anda";
@@ -279,6 +291,7 @@ function render(){
  var tb="";rows.forEach(function(r){tb+=trow(r,false,r.hp?r.us.length+" proyek":ppkh(r.u||r.b));if(r.hp)r.us.forEach(function(u){tb+=trow(u,true,ppkh(u.u))})});
  $("tb").innerHTML=tb;
  $("tf").innerHTML='<tr><td class="l">Total</td><td></td><td>'+num(P)+'</td><td>'+num(R)+'</td><td>'+num(pct,1)+'%</td><td>'+num(F,1)+'%</td><td>'+num(P-R)+'</td><td></td><td></td></tr>';
+ $("pr").innerHTML=ppkRank(tg);
  var al="";rows.filter(function(r){return r.s=="warn"||r.s=="late"}).sort(function(a,b){return a.gap-b.gap}).forEach(function(r){al+='<div class="alert '+(r.s=="warn"?"warn":"")+'"><b>'+esc(r.n)+'</b> berada '+num(Math.abs(r.gap),1)+' poin di bawah target. Perlu tambahan realisasi sekitar <b>Rp '+num(r.need)+' juta</b> untuk menyusul target bulan ini.</div>'});
  $("alerts").innerHTML=al||(rows.every(function(r){return r.s=="none"})?'<div class="alert" style="border-color:var(--mut);background:var(--bg)">Belum ada realisasi yang diinput.</div>':'<div class="alert" style="border-color:var(--ok);background:var(--okb)">Seluruh bidang sesuai target bulan ini.</div>');
  draw();renderInput(false);renderSet();renderKb();cleanReq();need();
