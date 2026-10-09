@@ -208,7 +208,7 @@ function kbl(b){return/sekretariat/i.test(b.name)?"Sekretaris":"Kepala Bidang"}
 function kbt(b){return/sekretariat/i.test(b.name)?"Sekretaris "+b.name:"Kepala "+b.name}
 function T(){return CFG.tgt||DT}
 function eff(b){var r=Array(12).fill(null),f=Array(12).fill(null),mt=Array(12).fill(null);
- Object.keys(RE).forEach(function(u){var e=(RE[u]&&RE[u].e)||{};if((CFG.admins||[]).indexOf(u)<0&&(b.ppk||[]).slice(0,1).indexOf(u)<0)return;
+ Object.keys(RE).forEach(function(u){var e=(RE[u]&&RE[u].e)||{};if((b.ppk||[]).slice(0,1).indexOf(u)<0)return;
   for(var m=1;m<=12;m++){var x=e[b.id+"_"+m];if(x&&(!mt[m-1]||x.t>mt[m-1].t)){mt[m-1]={t:x.t,u:u};r[m-1]=x.r;f[m-1]=x.f}}});
  return{r:r,f:f,mt:mt}}
 function toast(t,bad){var d=$("toast");if(!d){d=document.createElement("div");d.id="toast";d.setAttribute("role","status");d.style.cssText="position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));max-width:90%;padding:10px 16px;border-radius:10px;font-size:14px;z-index:9;box-shadow:0 4px 16px rgba(0,0,0,.25)";document.body.appendChild(d)}d.style.background=bad?"#b3261e":"var(--ink)";d.style.color=bad?"#fff":"var(--bg)";d.textContent=t;d.hidden=false;clearTimeout(d._t);d._t=setTimeout(function(){d.hidden=true},bad?8000:2200)}
@@ -309,6 +309,20 @@ function cleanReq(){var r=RQ[myId];if(!r||cleanReq._d)return;var ok=false;
  if(ok){cleanReq._d=1;db.doc("permintaan/"+myId).delete().then(function(){},function(){}).then(function(){cleanReq._d=0})}}
 function renderInput(force){
  var box=$("inp");if(!force&&box.contains(document.activeElement)&&document.activeElement!==box)return;
+ if(isAdmin){var A=allUnits();
+  if(!A.length){box.innerHTML='<h2>Input realisasi</h2><p class="hint">Belum ada bidang atau proyek.</p>';return}
+  if(!IB||!A.some(function(o){return o.u.id==IB}))IB=A[0].u.id;
+  var au=A.filter(function(o){return o.u.id==IB})[0],ux=UL.filter(function(y){return y.u===au.u})[0],ax=ux&&ux.x;if(!ax){box.innerHTML='';return}
+  var acr=ax.r[M-1],acf=ax.f[M-1],alm=ax.mt[M-1],ppn=(au.u.ppk||[]).length?esc(nm(au.u.ppk[0])):"belum ada PPK";
+  box.innerHTML='<h2>Input realisasi '+BLN[M-1]+' (hanya lihat)</h2><p class="hint">Realisasi diinput oleh PPK. Admin hanya dapat melihat dan tidak dapat mengubah angkanya. Jika angka dianggap salah, kosongkan agar PPK menginput ulang.</p><div class="f">'+
+   '<div><label for="ib">Bidang / proyek</label><select id="ib">'+A.map(function(o){return'<option value="'+esc(o.u.id)+'"'+(o.u.id==IB?" selected":"")+'>'+esc(uname(o))+'</option>'}).join("")+'</select></div>'+
+   '<div><label>Realisasi keuangan (Rp juta)</label><input type="number" disabled value="'+(acr==null?"":acr)+'" placeholder="belum diinput"></div>'+
+   '<div><label>Realisasi fisik (%)</label><input type="number" disabled value="'+(acf==null?"":acf)+'" placeholder="belum diinput"></div>'+
+   '<button type="button" id="icl"'+(acr==null&&acf==null?' disabled':'')+'>Kosongkan input '+BLN[M-1]+'</button></div>'+
+   '<div class="msg">PPK: '+ppn+(alm?' · terakhir diinput '+dt(alm):' · belum ada input bulan ini')+'</div>';
+  $("ib").onchange=function(){IB=this.value;renderInput(true)};
+  $("icl").onclick=function(){var bt=this;if(!arm(bt,"Klik lagi untuk mengosongkan"))return;bt.blur();clrMonth(au.u.id,M)};
+  return}
  var L=mine();
  if(!L.length){reqBox(box);return}
  if(!IB||!L.some(function(o){return o.u.id==IB}))IB=L[0].u.id;
@@ -383,7 +397,7 @@ function renderSet(){
   h+='<div class="sb"><div class="f"><div><label>Nama bidang</label><input type="text" style="min-width:260px" data-bn="'+esc(b.id)+'" value="'+esc(b.name)+'"></div>'+(hp?'<div><label>Pagu bidang (jumlah proyek, Rp juta)</label><input type="text" disabled value="'+num(bp(b))+'"></div>':'')+'<button type="button" data-bclr="'+esc(b.id)+'">Kosongkan realisasi bidang</button><button type="button" data-bdel="'+esc(b.id)+'">Hapus bidang</button></div>'+kbh(b);
   if(hp){l.forEach(function(p){h+='<div style="margin:6px 0 10px 18px;padding-left:14px;border-left:3px solid var(--line)">'+uf(p,true)+'</div>'})}else h+=uf(b,false);
   h+='<div class="f"><button type="button" data-addp="'+esc(b.id)+'">Tambah proyek</button></div></div>'});
- h+='<div class="f"><button class="pri" type="button" id="addb">Tambah bidang</button><button type="button" id="clrall">Hapus semua data realisasi (termasuk data contoh)</button></div>';
+ h+='<div class="f"><button class="pri" type="button" id="addb">Tambah bidang</button><button type="button" id="clrall">Hapus semua data realisasi</button></div>';
  box.innerHTML=h;
 }
 function onChange(e){var t=e.target,r;
@@ -396,6 +410,7 @@ function onChange(e){var t=e.target,r;
  if(t.dataset.n){r=fu(t.dataset.n);if(r&&canB(r.b)&&t.value.trim()){r.u.name=t.value.trim().slice(0,80);persU(r)}return}
  if(t.dataset.p){r=fu(t.dataset.p);var v3=t.value.trim()===""?0:parseFloat(t.value);if(r&&canB(r.b)&&v3>=0){r.u.p=v3;persU(r)}}}
 function arm(t,txt){if(t._a){t._a=0;clearTimeout(t._t);return true}t._a=1;t._o=t.textContent;t.textContent=txt;t._t=setTimeout(function(){t._a=0;t.textContent=t._o},4000);return false}
+async function clrMonth(id,m){try{var ks=Object.keys(RE);for(var i=0;i<ks.length;i++){var d=JSON.parse(JSON.stringify(RE[ks[i]]));if(d.e&&d.e[id+"_"+m]!==undefined){delete d.e[id+"_"+m];await db.doc("realisasi/"+ks[i]).set(d)}}toast("Input bulan ini dikosongkan")}catch(e){toast("Gagal mengosongkan: "+((e&&(e.message||e.code))||"tidak diketahui"),true)}}
 async function clr(ids){try{var ks=Object.keys(RE);for(var i=0;i<ks.length;i++){var d=JSON.parse(JSON.stringify(RE[ks[i]]));d.e=d.e||{};Object.keys(d.e).forEach(function(k){if(!ids||ids.some(function(id){return k.indexOf(id+"_")===0}))delete d.e[k]});await db.doc("realisasi/"+ks[i]).set(d)}toast("Data realisasi dikosongkan")}catch(e){toast("Gagal mengosongkan: "+((e&&(e.message||e.code))||"tidak diketahui"),true)}}
 function onClick(e){var t=e.target.closest("button");if(!t)return;var r,b0,a,hd;
  if(isAdmin){
