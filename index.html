@@ -449,8 +449,10 @@ async function onInput(e){var t=e.target,k=!!t.dataset.qk;if(!t.dataset.q&&!k)re
 async function need(){var ids={};(CFG.admins||[]).forEach(function(u){ids[u]=1});CFG.bidang.forEach(function(b){(b.kabid||[]).forEach(function(u){ids[u]=1})});allUnits().forEach(function(x){(x.u.ppk||[]).forEach(function(u){ids[u]=1})});Object.keys(RE).forEach(function(u){ids[u]=1});Object.keys(RQ).forEach(function(u){ids[u]=1});Object.keys(KL).forEach(function(u){ids[u]=1});
  var n=Object.keys(ids).filter(function(u){return!(u in NAMES)});if(!n.length)return;n.forEach(function(u){NAMES[u]=""});
  try{var ps=await usr.profiles(n);n.forEach(function(u){NAMES[u]=(ps[u]&&ps[u].name)||"";EM[u]=(ps[u]&&ps[u].email)||""})}catch(e){}render()}
+var DEFB=["Sekretariat","Bidang PAUD dan Pendidikan Nonformal","Bidang Pembinaan SD","Bidang Pembinaan SMP","Bidang GTK","Bidang Kepemudaan","Bidang Olahraga"],DEFAPP=0;
+function defBidang(){return DEFB.map(function(n,i){return{id:"b"+(i+1),name:n,p:0,ppk:[]}})}
 async function init(org,thn){
- CFG={org:org||"Dinas / instansi",tahun:thn>=2000?thn:new Date().getFullYear(),bidang:[{id:"b1",name:"Bidang 1",p:0,ppk:[]}],tgt:DT,admins:[myId]};
+ CFG={org:org||"Dinas / instansi",tahun:thn>=2000?thn:new Date().getFullYear(),bidang:defBidang(),tgt:DT,admins:[myId]};
  await saveCFG();
 }
 var sel=$("bulan");BLN.forEach(function(n,i){var o=document.createElement("option");o.value=i+1;o.textContent=n;sel.appendChild(o)});
@@ -463,6 +465,7 @@ var tm=$("tema");tm.onclick=function(){var d=document.documentElement,dark=d.get
  ready=true;
  if(!db){render();return}
  db.doc("config/main").onSnapshot(function(s){CFG=s.exists?JSON.parse(JSON.stringify(s.data())):null;
+  if(CFG&&isAdmin&&!DEFAPP&&(CFG.bidang||[]).length==1){var b0=CFG.bidang[0];if(b0.name=="Bidang 1"&&!b0.p&&!(b0.ppk||[]).length&&!(b0.kabid||[]).length&&!(b0.proyek||[]).length){DEFAPP=1;CFG.bidang=defBidang();saveCFG();toast("Daftar bidang bawaan sudah diisi. Silakan ubah di Pengaturan.")}}
   if(CFG&&isAdmin&&(CFG.admins||[]).indexOf(myId)<0){CFG.admins=(CFG.admins||[]).concat(myId);saveCFG()}render()},function(){db=null;render()});
  db.collection("realisasi").onSnapshot(function(s){RE={};s.docs.forEach(function(d){RE[d.id]=JSON.parse(JSON.stringify(d.data()))});render()},function(){});
  if(window.FBMODE&&isAdmin)db.collection("akses").onSnapshot(function(s){AK={};s.docs.forEach(function(d){AK[d.id]=d.data()});pdNote();render()},function(){});
