@@ -397,7 +397,7 @@ function renderSet(){
   h+='<div class="sb"><div class="f"><div><label>Nama bidang</label><input type="text" style="min-width:260px" data-bn="'+esc(b.id)+'" value="'+esc(b.name)+'"></div>'+(hp?'<div><label>Pagu bidang (jumlah proyek, Rp juta)</label><input type="text" disabled value="'+num(bp(b))+'"></div>':'')+'<button type="button" data-bclr="'+esc(b.id)+'">Kosongkan realisasi bidang</button><button type="button" data-bdel="'+esc(b.id)+'">Hapus bidang</button></div>'+kbh(b);
   if(hp){l.forEach(function(p){h+='<div style="margin:6px 0 10px 18px;padding-left:14px;border-left:3px solid var(--line)">'+uf(p,true)+'</div>'})}else h+=uf(b,false);
   h+='<div class="f"><button type="button" data-addp="'+esc(b.id)+'">Tambah proyek</button></div></div>'});
- h+='<div class="f"><button class="pri" type="button" id="addb">Tambah bidang</button><button type="button" id="clrall">Hapus semua data realisasi</button></div>';
+ h+='<div class="f"><button class="pri" type="button" id="addb">Tambah bidang</button><button type="button" id="defb">Isi bidang bawaan Dinas</button><button type="button" id="clrall">Hapus semua data realisasi</button></div>';
  box.innerHTML=h;
 }
 function onChange(e){var t=e.target,r;
@@ -427,6 +427,7 @@ function onClick(e){var t=e.target.closest("button");if(!t)return;var r,b0,a,hd;
   if(t.dataset.no){t.blur();db.doc("permintaan/"+t.dataset.no).delete().then(function(){toast("Permintaan ditolak dan dihapus")},function(){toast("Gagal menolak permintaan",true)});return}
   if(t.id=="aka"){var em=($("ake").value||"").trim().toLowerCase();if(!/^\S+@\S+\.\S+$/.test(em)){toast("Email tidak valid",true);return}t.blur();db.doc("akses/"+em).set({role:$("akr").value}).then(function(){toast("Akses ditambahkan")},function(){toast("Gagal menambahkan akses",true)});return}
   if(t.dataset.ake&&arm(t,"Klik lagi untuk menghapus")){if(t.dataset.ake==myEmail){toast("Akses Anda sendiri tidak bisa dihapus",true);return}t.blur();db.doc("akses/"+t.dataset.ake).delete().then(function(){toast("Akses dihapus")},function(){toast("Gagal menghapus akses",true)});return}
+  if(t.id=="defb"&&arm(t,"Klik lagi untuk mengisi bidang bawaan")){var kp=CFG.bidang.filter(function(b){var blank=(b.name=="Bidang 1"||b.name=="Bidang baru")&&!b.p&&!(b.ppk||[]).length&&!(b.kabid||[]).length&&!(b.proyek||[]).length;return!blank}),hv=kp.map(function(b){return b.name}),ad=defBidang().filter(function(d){return hv.indexOf(d.name)<0}),sd=Date.now().toString(36);ad.forEach(function(d,i){d.id="b"+sd+i});CFG.bidang=kp.concat(ad);saveCFG();return}
   if(t.id=="addb"){CFG.bidang.push({id:"b"+Date.now().toString(36),name:"Bidang baru",p:0,ppk:[]});saveCFG()}
   if(t.dataset.bdel&&arm(t,"Klik lagi untuk menghapus bidang")){CFG.bidang=CFG.bidang.filter(function(x){return x.id!=t.dataset.bdel});saveCFG()}
   if(t.dataset.rmk&&arm(t,"Klik lagi untuk mencabut")){b0=CFG.bidang.filter(function(x){return x.id==t.dataset.rmk})[0];if(b0)unKb(b0)}
