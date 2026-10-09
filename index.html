@@ -126,9 +126,14 @@ td.l,th.l{text-align:left}
 </div>
 <section class="panel" id="inp" style="margin-bottom:18px"></section>
 <section class="panel" id="kb" hidden style="margin-bottom:18px"></section>
+<section class="panel" id="rincian" style="margin-bottom:18px">
+  <h2>Rincian per bidang</h2>
+  <p class="hint">Setiap bidang menampilkan pagu dan total terealisasinya, lalu rincian anggaran, keuangan, dan fisik tiap PPK di bawahnya. Total bidang adalah jumlah dari PPK-nya.</p>
+  <div id="rcn"></div>
+</section>
 <section class="panel" id="rekap" style="margin-bottom:18px">
   <h2>Rekap per bidang</h2>
-  <p class="hint">Angka bersumber dari input PPK masing-masing bidang.</p>
+  <p class="hint">Angka bersumber dari input PPK masing-masing bidang. Baris Total dihitung dari seluruh PPK yang sudah ditetapkan; pagu yang belum punya PPK tidak ikut dihitung.</p>
   <div class="scroll"><table>
     <thead><tr><th class="l">Bidang</th><th class="l">PPK</th><th>Pagu (Rp juta)</th><th>Realisasi (Rp juta)</th><th>Keuangan</th><th>Fisik</th><th>Sisa (Rp juta)</th><th class="l">Status PPK</th><th class="l">Status pagu</th><th class="l">Diperbarui</th></tr></thead>
     <tbody id="tb"></tbody><tfoot id="tf"></tfoot>
@@ -208,7 +213,7 @@ function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){retur
 function num(v,d){return Number(v).toLocaleString("id-ID",{maximumFractionDigits:d||0,minimumFractionDigits:d||0})}
 function val(a,m){for(var i=m-1;i>=0;i--)if(a[i]!=null)return a[i];return 0}
 function st(g){var a=(CFG&&CFG.th)||[5,15];return g>=-a[0]?"ok":g>=-a[1]?"warn":"late"}
-var KP={done:"Sudah teralisasi (anggaran terserap 100%)",fisik:"Fisik selesai, keuangan belum tuntas",keu:"Keuangan tuntas, fisik belum selesai",blm:"Belum teralisasi",none:"Belum ada input"};
+var KP={done:"Selesai: fisik 100% dan keuangan terserap penuh",fisik:"Fisik selesai, keuangan belum tuntas",keu:"Keuangan tuntas, fisik belum selesai",blm:"Belum teralisasi",none:"Belum ada input"};
 function kp(r){var t=(r.p!=null&&r.real!=null)?' title="Realisasi Rp '+num(r.real)+' juta dari pagu Rp '+num(r.p)+' juta"':'';return'<span class="pill '+(r.k||"none")+'"'+t+'>'+esc(r.kt||KP[r.k||"none"])+'</span>'}
 var SL={done:"Sudah teralisasi",fisik:"Fisik selesai, keuangan belum tuntas",keu:"Keuangan tuntas, fisik belum selesai",none:"Belum ada input",ok:"Sesuai target",warn:"Perlu dipercepat",late:"Terlambat"};
 function nm(u){return NAMES[u]||"Pengguna"}
@@ -243,7 +248,7 @@ async function unKb(b){var u=kb(b);if(!u)return;var m=mgr(b);b.proyek=JSON.parse
 var UL=[];
 function ur(y,tg){var x=y.x,p=y.u.p||0,real=val(x.r,M),fis=val(x.f,M),pct=p>0?real/p*100:0,gap=pct-tg,nd=x.r.every(function(v){return v==null}),lm=null;
  for(var k=M-1;k>=0;k--)if(x.mt[k]){lm=x.mt[k];break}
- return{u:y.u,n:y.u.name,p:p,real:real,fis:fis,pct:pct,gap:gap,nd:nd,lm:lm,s:nd?"none":st(gap),k:nd?"none":pct>=99.995?"done":fis>=99.995?"fisik":"blm",need:Math.max(0,tg/100*p-real),sisa:p-real}}
+ return{u:y.u,n:y.u.name,p:p,real:real,fis:fis,pct:pct,gap:gap,nd:nd,lm:lm,s:nd?"none":st(gap),k:nd?"none":(pct>=99.995&&fis>=99.995)?"done":pct>=99.995?"keu":fis>=99.995?"fisik":"blm",need:Math.max(0,tg/100*p-real),sisa:p-real}}
 function dt(lm){return lm?new Date(lm.t).toLocaleDateString("id-ID",{day:"numeric",month:"short"})+" · "+esc(nm(lm.u)):"–"}
 function ppkh(u){var s=(u.ppk||[]).map(nm).join(", ");return s?esc(s):'<span class="sub">belum ada</span>'}
 function trow(r,ind,pp){return'<tr'+(ind?' style="font-size:13.5px;color:var(--mut)"':'')+'><td class="l"'+(ind?' style="padding-left:24px"':'')+'>'+(ind?"↳ ":dot(r.b))+esc(r.n)+'</td><td class="l">'+pp+'</td><td>'+num(r.p)+'</td><td>'+num(r.real)+'</td><td>'+num(r.pct,1)+'%</td><td>'+num(r.fis,1)+'%</td><td>'+num(r.sisa)+'</td><td class="l">'+kp(r)+'</td><td class="l"><span class="pill '+r.s+'">'+SL[r.s]+'</span></td><td class="l">'+dt(r.lm)+'</td></tr>'}
@@ -252,10 +257,30 @@ var LOP="";
 function pubOpsi(){if(!db||!CFG||!(CFG.bidang||[]).length)return;if(!(isAdmin||CFG.bidang.some(isKb)))return;
  var o={bidang:CFG.bidang.map(function(b){return{id:b.id,name:b.name,kl:kbl(b),kt:!!kb(b),units:units(b).map(function(u){return{id:u.id,name:u.name,pt:!!(u.ppk||[]).length}})}})},z=JSON.stringify(o);
  if(z===LOP)return;LOP=z;o.t=Date.now();db.doc("opsi/main").set(o).catch(function(){})}
-function ppkRank(tg){var rs=UL.map(function(y){var r=ur(y,tg);r.y=y;return r}).sort(function(a,b){if(a.nd!=b.nd)return a.nd?1:-1;return b.pct-a.pct}),n=0;
- if(!rs.length)return'<tr><td class="l" colspan="9">Belum ada PPK.</td></tr>';
- return rs.map(function(r){var no=r.nd?"–":++n,pp=(r.y.u.ppk||[]).length?ppkh(r.y.u):'<span class="sub">belum ada PPK</span>',pc=Math.min(100,r.pct);
-  return'<tr><td class="l">'+no+'</td><td class="l"><b>'+pp+'</b></td><td class="l">'+dot(r.y.b)+esc(uname(r.y))+'</td><td><span style="display:inline-block;width:80px;height:8px;border-radius:5px;background:var(--bg);border:1px solid var(--line);vertical-align:middle;margin-right:8px;overflow:hidden"><span style="display:block;height:100%;width:'+pc+'%;background:'+bcol(r.y.b)+'"></span></span><b>'+num(r.pct,1)+'%</b></td><td>'+num(r.fis,1)+'%</td><td>'+(r.nd?"–":(r.gap>=0?"+":"")+num(r.gap,1)+" poin")+'</td><td class="l">'+kp(r)+'</td><td class="l"><span class="pill '+r.s+'">'+SL[r.s]+'</span></td><td class="l">'+dt(r.lm)+'</td></tr>'}).join("")}
+function rincian(rows){if(!rows.length)return'<div class="empty">Belum ada bidang.</div>';
+ return rows.map(function(r){var us=(r.us&&r.us.length)?r.us:[r],flat=!(r.us&&r.us.length);
+  var body=us.map(function(u){var own=u.u||r.b;return'<tr><td class="l">'+((u.u&&u.u!==r.b&&!flat)?'<span class="sub">'+esc(u.n)+'</span><br>':'')+ppkh(own)+'</td><td>'+num(u.p)+'</td><td>'+num(u.real)+'</td><td>'+num(u.pct,1)+'%</td><td>'+num(u.fis,1)+'%</td><td class="l">'+kp(u)+'</td></tr>'}).join("");
+  return'<div style="border-left:5px solid '+bcol(r.b)+';padding:12px 14px;margin-bottom:12px;background:var(--bg);border-radius:10px"><div class="rh"><b style="font-size:16px">'+dot(r.b)+esc(r.n)+'</b><span class="pill '+r.s+'">'+SL[r.s]+'</span></div>'+
+   '<div class="meta" style="font-size:14px;margin:6px 0 8px"><span>Pagu <b style="color:var(--ink)">Rp '+num(r.p)+' juta</b></span><span>Terealisasi <b style="color:var(--ink)">Rp '+num(r.real)+' juta</b> ('+num(r.pct,1)+'%)</span><span>Fisik <b style="color:var(--ink)">'+num(r.fis,1)+'%</b></span></div>'+
+   '<div class="scroll"><table style="min-width:520px"><thead><tr><th class="l">PPK</th><th>Anggaran (Rp juta)</th><th>Keuangan (Rp juta)</th><th>Keuangan</th><th>Fisik</th><th class="l">Keterangan PPK</th></tr></thead><tbody>'+body+'</tbody></table></div></div>'}).join("")}
+function rp(v){return Math.abs(v)>=1000?"Rp "+num(v/1000,1)+" M":"Rp "+num(v)+" juta"}
+function ppkAgg(tg){var m={},un=0;
+ UL.forEach(function(y){var u=(y.u.ppk||[])[0],r=ur(y,tg);
+  if(!u){un+=r.p;return}
+  var a=m[u]||(m[u]={id:u,rs:[],p:0,real:0,fw:0,nd:true,lm:null});
+  a.rs.push({r:r,y:y});a.p+=r.p;a.real+=r.real;a.fw+=r.fis*r.p;if(!r.nd)a.nd=false;if(r.lm&&(!a.lm||r.lm.t>a.lm.t))a.lm=r.lm});
+ var out=Object.keys(m).map(function(u){var a=m[u],p=a.p,pct=p>0?a.real/p*100:0,fis=p?a.fw/p:0,kd=pct>=99.995,fd=fis>=99.995;
+  a.fis=fis;a.pct=pct;a.gap=pct-tg;a.s=a.nd?"none":st(a.gap);a.k=a.nd?"none":(kd&&fd?"done":kd?"keu":fd?"fisik":"blm");a.sisa=p-a.real;return a});
+ return{list:out,un:un}}
+function ppkRank(AG,tg){var rs=AG.list.slice().sort(function(a,b){if(a.nd!=b.nd)return a.nd?1:-1;return b.pct-a.pct}),n=0,h="",P=0,R=0,F=0;
+ if(!rs.length)return'<tr><td class="l" colspan="9">Belum ada PPK yang ditetapkan.</td></tr>';
+ rs.forEach(function(a){var no=a.nd?"–":++n,pc=Math.min(100,a.pct);P+=a.p;R+=a.real;F+=a.fw;
+  var us=a.rs.map(function(x){return dot(x.y.b)+esc(uname(x.y))+(a.rs.length>1?' <span class="sub">'+num(x.r.pct,1)+'% · fisik '+num(x.r.fis,1)+'%</span>':'')}).join("<br>");
+  h+='<tr><td class="l">'+no+'</td><td class="l"><b>'+ppkh({ppk:[a.id]})+'</b></td><td class="l">'+us+'</td><td><span style="display:inline-block;width:80px;height:8px;border-radius:5px;background:var(--bg);border:1px solid var(--line);vertical-align:middle;margin-right:8px;overflow:hidden"><span style="display:block;height:100%;width:'+pc+'%;background:'+bcol(a.rs[0].y.b)+'"></span></span><b>'+num(a.pct,1)+'%</b><div class="sub">Rp '+num(a.real)+' dari Rp '+num(a.p)+' juta</div></td><td>'+num(a.fis,1)+'%</td><td>'+(a.nd?"–":(a.gap>=0?"+":"")+num(a.gap,1)+" poin")+'</td><td class="l">'+kp({k:a.k,p:a.p,real:a.real})+'</td><td class="l"><span class="pill '+a.s+'">'+SL[a.s]+'</span></td><td class="l">'+dt(a.lm)+'</td></tr>'});
+ var pt=P?R/P*100:0;
+ h+='<tr style="font-weight:700"><td class="l"></td><td class="l">Total seluruh PPK</td><td class="l">'+rs.length+' PPK</td><td>'+num(pt,1)+'%<div class="sub">Rp '+num(R)+' dari Rp '+num(P)+' juta</div></td><td>'+num(P?F/P:0,1)+'%</td><td>'+(rs.every(function(a){return a.nd})?"–":(pt-tg>=0?"+":"")+num(pt-tg,1)+" poin")+'</td><td></td><td></td><td></td></tr>';
+ if(AG.un>0)h+='<tr><td class="l" colspan="9"><span class="sub">Pagu Rp '+num(AG.un)+' juta belum memiliki PPK dan tidak ikut dihitung dalam total.</span></td></tr>';
+ return h}
 function render(){
  if(!ready)return;
  try{pubOpsi()}catch(e){}
@@ -276,36 +301,36 @@ function render(){
   var fis=p?fw/p:0,pct=p>0?real/p*100:0,gap=pct-tg,hp=plist(b).length>0;if(hp)np+=plist(b).length;
   return{b:b,n:b.name,p:p,real:real,fis:fis,pct:pct,gap:gap,s:nd?"none":st(gap),k:hp?(nd?"none":(us.every(function(u){return u.k=="done"})?"done":"blm")):(us[0]?us[0].k:"none"),kt:hp?us.filter(function(u){return u.k=="done"}).length+" dari "+us.length+" proyek teralisasi":null,need:Math.max(0,tg/100*p-real),sisa:p-real,lm:lm,hp:hp,us:us}});
  ru.forEach(function(y){var r=ur(y,tg);r.n=uname(y);r.b=y.b;r.hp=false;r.us=[];rows.push(r)});
- rows.forEach(function(r){P+=r.p;R+=r.real;F+=r.fis*r.p});F=P?F/P:0;var pct=P?R/P*100:0,gap=pct-tg;
+ var AG=ppkAgg(tg);AG.list.forEach(function(a){P+=a.p;R+=a.real;F+=a.fw});F=P?F/P:0;var pct=P?R/P*100:0,gap=pct-tg;
  var mi=mine().map(uname),kbn=CFG.bidang.filter(isKb).map(kbt);
  $("role").innerHTML=who()+" · "+(isAdmin?"Pimpinan/admin"+(Object.keys(RQ).length?" · <b>"+Object.keys(RQ).length+" permintaan PPK menunggu persetujuan</b>":""):((kbn.length?esc(kbn.join(", ")):"")+(kbn.length&&mi.length?" · ":"")+(mi.length?"PPK "+esc(mi.join(", ")):"")||"Belum terdaftar"));
- var priv=!isAdmin&&!mi.length&&!kbn.length;document.querySelectorAll("#main .band,#main .grid,#rekap,#ppkrank").forEach(function(el){el.hidden=priv});
+ var priv=!isAdmin&&!mi.length&&!kbn.length;document.querySelectorAll("#main .band,#main .grid,#rincian,#rekap,#ppkrank").forEach(function(el){el.hidden=priv});
  $("chart").parentNode.querySelector(".hint").textContent=isAdmin?"Seluruh bidang, dibandingkan dengan target tiap bulan.":"Bidang dan proyek Anda, dibandingkan dengan target tiap bulan.";
  $("bln").textContent=BLN[M-1]+" "+(CFG.tahun||2026);$("org").textContent=CFG.org||"Dinas Pendidikan, Pemuda dan Olahraga";$("thn").textContent=CFG.tahun||2026;document.title="Dashboard Serapan Anggaran – "+$("org").textContent;var a_=CFG.th||[5,15];document.querySelector(".foot").textContent="Status: Sesuai target bila selisih paling banyak "+a_[0]+" poin di bawah target, Perlu dipercepat bila "+a_[0]+" sampai "+a_[1]+" poin di bawah target, Terlambat bila lebih dari "+a_[1]+" poin di bawah target. Batas dapat diubah admin di bagian Pengaturan.";
- $("k1").textContent="Rp "+num(P/1000,1)+" M";$("k1n").textContent=isAdmin?rows.length+" bidang"+(np?" · "+np+" proyek":""):rows.length+" bidang/proyek Anda";
- $("k2").textContent=num(pct,1)+"%";$("k2n").textContent="Rp "+num(R/1000,1)+" M · target "+tg+"%";
+ $("k1").textContent=rp(P);$("k1n").textContent=isAdmin?rows.length+" bidang · "+AG.list.length+" PPK"+(AG.un>0?" · "+rp(AG.un)+" belum ada PPK":""):rows.length+" bidang/proyek Anda";
+ $("k2").textContent=num(pct,1)+"%";$("k2n").textContent=rp(R)+" · target "+tg+"%";
  $("k3").textContent=num(F,1)+"%";$("k3n").textContent=F<pct?"Fisik tertinggal dari keuangan":"Fisik sejalan dengan keuangan";
- $("k4").textContent=(gap>=0?"+":"")+num(gap,1)+" poin";$("k4n").textContent=(rows.every(function(r){return r.s=="none"})?SL.none:SL[st(gap)])+" · sisa Rp "+num((P-R)/1000,1)+" M";
+ $("k4").textContent=(gap>=0?"+":"")+num(gap,1)+" poin";$("k4n").textContent=(rows.every(function(r){return r.s=="none"})?SL.none:SL[st(gap)])+" · sisa "+rp(P-R);
  var h="";rows.slice().sort(function(a,b){return a.gap-b.gap}).forEach(function(r){
   h+='<div class="row" style="border-left:5px solid '+bcol(r.b)+';padding-left:12px"><div class="rh"><span class="rn">'+dot(r.b)+esc(r.n)+'</span><span class="pill '+r.s+'">'+SL[r.s]+'</span></div><div class="track"><div class="fill '+r.s+'" style="width:'+Math.min(100,r.pct)+'%"></div><div class="tick" style="left:calc('+tg+'% - 1px)"></div></div><div class="ftrack"><div class="ffill" style="width:'+Math.min(100,r.fis)+'%;background:'+bcol(r.b)+';opacity:.8"></div></div><div class="meta"><span><b>'+num(r.pct,1)+'%</b> keuangan · '+num(r.fis,1)+'% fisik</span><span>Rp '+num(r.real)+' dari Rp '+num(r.p)+' juta</span></div>'+
   (r.hp?r.us.map(function(u){return'<div class="meta"><span>↳ '+esc(u.n)+'</span><span>'+num(u.pct,1)+'% · '+SL[u.s]+(u.k=="done"||u.k=="fisik"||u.k=="keu"?' · '+KP[u.k]:'')+'</span></div>'}).join(""):"")+'</div>'});
  $("bars").innerHTML=h||'<div class="empty">Belum ada bidang.</div>';
  var tb="";rows.forEach(function(r){tb+=trow(r,false,r.hp?r.us.length+" proyek":ppkh(r.u||r.b));if(r.hp)r.us.forEach(function(u){tb+=trow(u,true,ppkh(u.u))})});
  $("tb").innerHTML=tb;
- $("tf").innerHTML='<tr><td class="l">Total</td><td></td><td>'+num(P)+'</td><td>'+num(R)+'</td><td>'+num(pct,1)+'%</td><td>'+num(F,1)+'%</td><td>'+num(P-R)+'</td><td></td><td></td><td></td></tr>';
- $("pr").innerHTML=ppkRank(tg);
+ $("tf").innerHTML='<tr><td class="l">Total seluruh PPK</td><td></td><td>'+num(P)+'</td><td>'+num(R)+'</td><td>'+num(pct,1)+'%</td><td>'+num(F,1)+'%</td><td>'+num(P-R)+'</td><td></td><td></td><td></td></tr>';
+ $("pr").innerHTML=ppkRank(AG,tg);$("rcn").innerHTML=rincian(rows);
  var al="";rows.filter(function(r){return r.s=="warn"||r.s=="late"}).sort(function(a,b){return a.gap-b.gap}).forEach(function(r){al+='<div class="alert '+(r.s=="warn"?"warn":"")+'"><b>'+esc(r.n)+'</b> berada '+num(Math.abs(r.gap),1)+' poin di bawah target. Perlu tambahan realisasi sekitar <b>Rp '+num(r.need)+' juta</b> untuk menyusul target bulan ini.</div>'});
  $("alerts").innerHTML=al||(rows.every(function(r){return r.s=="none"})?'<div class="alert" style="border-color:var(--mut);background:var(--bg)">Belum ada realisasi yang diinput.</div>':'<div class="alert" style="border-color:var(--ok);background:var(--okb)">Seluruh bidang sesuai target bulan ini.</div>');
  draw();renderInput(false);renderSet();renderKb();cleanReq();need();
 }
 function draw(){
- var W=520,H=240,L=42,B=24,Tp=10,Rr=10,w=W-L-Rr,h=H-B-Tp,P=0,TT=T();UL.forEach(function(y){P+=y.u.p||0});
+ var W=520,H=240,L=42,B=24,Tp=10,Rr=10,w=W-L-Rr,h=H-B-Tp,P=0,TT=T(),UP=UL.filter(function(y){return(y.u.ppk||[]).length});UP.forEach(function(y){P+=y.u.p||0});
  function X(i){return L+w*i/11}function Y(v){return Tp+h*(1-v/100)}
  var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Kurva serapan kumulatif">';
  [0,25,50,75,100].forEach(function(g){s+='<line x1="'+L+'" x2="'+(W-Rr)+'" y1="'+Y(g)+'" y2="'+Y(g)+'" stroke="var(--line)"/><text x="'+(L-6)+'" y="'+(Y(g)+4)+'" text-anchor="end">'+g+'%</text>'});
  for(var i=0;i<12;i++)s+='<text x="'+X(i)+'" y="'+(H-6)+'" text-anchor="middle">'+BLN[i].slice(0,3)+'</text>';
  s+='<polyline fill="none" stroke="var(--tick)" stroke-width="2" stroke-dasharray="5 4" points="'+TT.map(function(v,i){return X(i)+","+Y(v)}).join(" ")+'"/>';
- var k=[],f=[];for(i=0;i<M;i++){var R=0,F=0,has=false;UL.forEach(function(y){R+=val(y.x.r,i+1);F+=val(y.x.f,i+1)*(y.u.p||0);for(var q=0;q<=i;q++)if(y.x.r[q]!=null)has=true});if(has){k.push(X(i)+","+Y(P?R/P*100:0));f.push(X(i)+","+Y(P?F/P:0))}}
+ var k=[],f=[];for(i=0;i<M;i++){var R=0,F=0,has=false;UP.forEach(function(y){R+=val(y.x.r,i+1);F+=val(y.x.f,i+1)*(y.u.p||0);for(var q=0;q<=i;q++)if(y.x.r[q]!=null)has=true});if(has){k.push(X(i)+","+Y(P?R/P*100:0));f.push(X(i)+","+Y(P?F/P:0))}}
  s+='<polyline fill="none" stroke="var(--pri)" stroke-opacity=".55" stroke-width="2" points="'+f.join(" ")+'"/><polyline fill="none" stroke="var(--pri2)" stroke-width="3" stroke-linejoin="round" points="'+k.join(" ")+'"/>';
  if(!k.length){$("chart").innerHTML=s+'<text x="'+(L+w/2)+'" y="'+(Tp+h/2)+'" text-anchor="middle">Belum ada realisasi yang diinput</text></svg>';return}var lp=k[k.length-1].split(",");$("chart").innerHTML=s+'<circle cx="'+lp[0]+'" cy="'+lp[1]+'" r="5" fill="var(--pri2)"/></svg>';
 }
