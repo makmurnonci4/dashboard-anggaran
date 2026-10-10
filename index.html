@@ -330,7 +330,11 @@ function render(){
  var priv=!isAdmin&&!mi.length&&!kbn.length;document.querySelectorAll("#main .band,#main .grid,#rincian,#rekap,#ppkrank").forEach(function(el){el.hidden=priv});
  $("chart").parentNode.querySelector(".hint").textContent=isAdmin?"Seluruh bidang, dibandingkan dengan target tiap bulan.":"Bidang dan proyek Anda, dibandingkan dengan target tiap bulan.";
  $("bln").textContent=BLN[M-1]+" "+(CFG.tahun||2026);$("org").textContent=CFG.org||"Dinas Pendidikan, Pemuda dan Olahraga";$("thn").textContent=CFG.tahun||2026;document.title="Dashboard Serapan Anggaran – "+$("org").textContent;var a_=CFG.th||[5,15];document.querySelector(".foot").textContent="Status: Sesuai target bila selisih paling banyak "+a_[0]+" poin di bawah target, Perlu dipercepat bila "+a_[0]+" sampai "+a_[1]+" poin di bawah target, Terlambat bila lebih dari "+a_[1]+" poin di bawah target. Batas dapat diubah admin di bagian Pengaturan.";
- $("k1").textContent=rp(P);$("k1n").textContent=isAdmin?rows.length+" bidang · "+AG.list.length+" PPK"+(AG.un>0?" · "+rp(AG.un)+" belum ada PPK":""):rows.length+" bidang/proyek Anda";
+ var k1l=$("k1").previousElementSibling,cnt=rows.length+" bidang · "+AG.list.length+" PPK"+(AG.un>0?" · "+rp(AG.un)+" belum ada PPK":"");
+ if(isAdmin){var pdn=CFG.pagu||0,tbd=CFG.bidang.reduce(function(a,b){return a+bpg(b)},0),sd=pdn-tbd;
+  if(pdn>0){k1l.textContent="Pagu Dinas";$("k1").textContent=rp(pdn);$("k1n").innerHTML="Pagu bidang "+rp(tbd)+"<br>"+(sd<0?"<b>Melebihi pagu Dinas "+rp(-sd)+"</b>":"Sisa pagu Dinas "+rp(sd))+"<br>"+cnt}
+  else{k1l.textContent="Pagu bidang";$("k1").textContent=rp(tbd);$("k1n").innerHTML="Pagu Dinas belum diisi (Pengaturan)<br>"+cnt}}
+ else{k1l.textContent="Total pagu";$("k1").textContent=rp(P);$("k1n").textContent=rows.length+" bidang/proyek Anda"}
  $("k2").textContent=num(pct,1)+"%";$("k2n").textContent=rp(R)+" · target "+tg+"%";
  $("k3").textContent=num(F,1)+"%";$("k3n").textContent=F<pct?"Fisik tertinggal dari keuangan":"Fisik sejalan dengan keuangan";
  $("k4").textContent=(gap>=0?"+":"")+num(gap,1)+" poin";$("k4n").textContent=(rows.every(function(r){return r.s=="none"})?SL.none:SL[st(gap)])+" · sisa "+rp(P-R);
