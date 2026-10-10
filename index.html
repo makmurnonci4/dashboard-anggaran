@@ -128,7 +128,7 @@ td.l,th.l{text-align:left}
 <section class="panel" id="kb" hidden style="margin-bottom:18px"></section>
 <section class="panel" id="rincian" style="margin-bottom:18px">
   <h2>Rincian per bidang</h2>
-  <p class="hint">Setiap bidang menampilkan pagu dan total terealisasinya, lalu rincian anggaran, keuangan, dan fisik tiap PPK di bawahnya. Total bidang adalah jumlah dari PPK-nya.</p>
+  <p class="hint">Setiap bidang menampilkan pagu dan total terealisasinya, beserta sisa, realisasi fisik, dan keterangan (Sesuai target / Perlu dipercepat / Terlambat), lalu rincian tiap PPK di bawahnya dengan keterangan Sudah / Belum teralisasi. Total bidang adalah jumlah dari PPK-nya.</p>
   <div id="rcn"></div>
 </section>
 <section class="panel" id="rekap" style="margin-bottom:18px">
@@ -250,6 +250,7 @@ function ur(y,tg){var x=y.x,p=y.u.p||0,real=val(x.r,M),fis=val(x.f,M),pct=p>0?re
  for(var k=M-1;k>=0;k--)if(x.mt[k]){lm=x.mt[k];break}
  return{u:y.u,n:y.u.name,p:p,real:real,fis:fis,pct:pct,gap:gap,nd:nd,lm:lm,s:nd?"none":st(gap),k:nd?"none":(pct>=99.995&&fis>=99.995)?"done":pct>=99.995?"keu":fis>=99.995?"fisik":"blm",need:Math.max(0,tg/100*p-real),sisa:p-real}}
 function dt(lm){return lm?new Date(lm.t).toLocaleDateString("id-ID",{day:"numeric",month:"short"})+" · "+esc(nm(lm.u)):"–"}
+function ket(r){var t=r.k=="done"?"Sudah teralisasi":r.k=="none"?"Belum ada input":"Belum teralisasi";return'<span class="pill '+(r.k||"none")+'" title="'+esc(KP[r.k||"none"])+'">'+t+'</span>'}
 function ppkh(u){var s=(u.ppk||[]).map(nm).join(", ");return s?esc(s):'<span class="sub">belum ada</span>'}
 function trow(r,ind,pp){return'<tr'+(ind?' style="font-size:13.5px;color:var(--mut)"':'')+'><td class="l"'+(ind?' style="padding-left:24px"':'')+'>'+(ind?"↳ ":dot(r.b))+esc(r.n)+'</td><td class="l">'+pp+'</td><td>'+num(r.p)+'</td><td>'+num(r.real)+'</td><td>'+num(r.pct,1)+'%</td><td>'+num(r.fis,1)+'%</td><td>'+num(r.sisa)+'</td><td class="l">'+kp(r)+'</td><td class="l"><span class="pill '+r.s+'">'+SL[r.s]+'</span></td><td class="l">'+dt(r.lm)+'</td></tr>'}
 
@@ -259,10 +260,10 @@ function pubOpsi(){if(!db||!CFG||!(CFG.bidang||[]).length)return;if(!(isAdmin||C
  if(z===LOP)return;LOP=z;o.t=Date.now();db.doc("opsi/main").set(o).catch(function(){})}
 function rincian(rows){if(!rows.length)return'<div class="empty">Belum ada bidang.</div>';
  return rows.map(function(r){var us=(r.us&&r.us.length)?r.us:[r],flat=!(r.us&&r.us.length);
-  var body=us.map(function(u){var own=u.u||r.b;return'<tr><td class="l">'+((u.u&&u.u!==r.b&&!flat)?'<span class="sub">'+esc(u.n)+'</span><br>':'')+ppkh(own)+'</td><td>'+num(u.p)+'</td><td>'+num(u.real)+'</td><td>'+num(u.pct,1)+'%</td><td>'+num(u.fis,1)+'%</td><td class="l">'+kp(u)+'</td></tr>'}).join("");
-  return'<div style="border-left:5px solid '+bcol(r.b)+';padding:12px 14px;margin-bottom:12px;background:var(--bg);border-radius:10px"><div class="rh"><b style="font-size:16px">'+dot(r.b)+esc(r.n)+'</b><span class="pill '+r.s+'">'+SL[r.s]+'</span></div>'+
-   '<div class="meta" style="font-size:14px;margin:6px 0 8px"><span>Pagu <b style="color:var(--ink)">Rp '+num(r.p)+' juta</b></span><span>Terealisasi <b style="color:var(--ink)">Rp '+num(r.real)+' juta</b> ('+num(r.pct,1)+'%)</span><span>Fisik <b style="color:var(--ink)">'+num(r.fis,1)+'%</b></span></div>'+
-   '<div class="scroll"><table style="min-width:520px"><thead><tr><th class="l">PPK</th><th>Anggaran (Rp juta)</th><th>Keuangan (Rp juta)</th><th>Keuangan</th><th>Fisik</th><th class="l">Keterangan PPK</th></tr></thead><tbody>'+body+'</tbody></table></div></div>'}).join("")}
+  var body=us.map(function(u){var own=u.u||r.b;return'<tr><td class="l">'+((u.u&&u.u!==r.b&&!flat)?'<span class="sub">'+esc(u.n)+'</span><br>':'')+ppkh(own)+'</td><td>'+num(u.p)+'</td><td>'+num(u.real)+'</td><td>'+num(u.sisa)+'</td><td>'+num(u.pct,1)+'%</td><td>'+num(u.fis,1)+'%</td><td class="l">'+ket(u)+'</td></tr>'}).join("");
+  return'<div style="border-left:5px solid '+bcol(r.b)+';padding:12px 14px;margin-bottom:12px;background:var(--bg);border-radius:10px"><div class="rh"><b style="font-size:16px">'+dot(r.b)+esc(r.n)+'</b></div>'+
+   '<div class="meta" style="font-size:14px;margin:6px 0 8px"><span>Pagu <b style="color:var(--ink)">Rp '+num(r.p)+' juta</b></span><span>Terealisasi <b style="color:var(--ink)">Rp '+num(r.real)+' juta</b> ('+num(r.pct,1)+'%)</span><span>Sisa <b style="color:var(--ink)">Rp '+num(r.sisa)+' juta</b></span><span>Fisik <b style="color:var(--ink)">'+num(r.fis,1)+'%</b></span><span>Keterangan <span class="pill '+r.s+'">'+SL[r.s]+'</span></span></div>'+
+   '<div class="scroll"><table style="min-width:640px"><thead><tr><th class="l">PPK</th><th>Plafon anggaran (Rp juta)</th><th>Realisasi keuangan (Rp juta)</th><th>Sisa (Rp juta)</th><th>Keuangan</th><th>Realisasi fisik</th><th class="l">Keterangan</th></tr></thead><tbody>'+body+'</tbody></table></div></div>'}).join("")}
 function rp(v){return Math.abs(v)>=1000?"Rp "+num(v/1000,1)+" M":"Rp "+num(v)+" juta"}
 function ppkAgg(tg){var m={},un=0;
  UL.forEach(function(y){var u=(y.u.ppk||[])[0],r=ur(y,tg);
