@@ -283,7 +283,7 @@ function rincian(rows){if(!rows.length)return'<div class="empty">Belum ada bidan
   var body=us.map(function(u){var own=u.u||r.b;return'<tr><td class="l">'+((u.u&&u.u!==r.b&&!flat)?'<b>'+esc(u.n)+'</b><div class="sub">'+ppkh(own)+'</div>':ppkh(own))+'</td><td>'+num(u.p)+'</td><td>'+num(u.real)+'<div class="sub">'+num(u.pct,1)+'%</div></td><td>'+num(u.sisa)+'</td><td>'+num(u.fis,1)+'%</td><td class="l">'+ket(u)+'</td></tr>'}).join("");
   var note=r.hp?'<div class="rcn-note">Dari pagu bidang, Rp '+num(r.pl)+' juta telah dialokasikan ke PPK sebagai plafon anggaran'+(r.pl<r.p?'; sisa Rp '+num(r.p-r.pl)+' juta belum dialokasikan.':r.pl>r.p?'; <b style="color:var(--late)">alokasi melebihi pagu bidang.</b>':'; seluruh pagu bidang telah dialokasikan.')+'</div>':'';
   return'<div class="rcn-card" style="--c:'+c+'"><div class="rcn-h"><b>'+esc(r.n)+'</b><span class="pill '+r.s+'">'+SL[r.s]+'</span></div>'+
-   '<div class="rcn-st">'+sv('Pagu','Rp '+num(r.p)+' jt')+sv('Terealisasi','Rp '+num(r.real)+' jt')+sv('Sisa','Rp '+num(r.sisa)+' jt')+sv('Fisik',num(r.fis,1)+'%')+'</div>'+
+   '<div class="rcn-st">'+sv(r.hp?'Pagu':'Plafon anggaran','Rp '+num(r.p)+' jt')+sv('Terealisasi','Rp '+num(r.real)+' jt')+sv('Sisa','Rp '+num(r.sisa)+' jt')+sv('Fisik',num(r.fis,1)+'%')+'</div>'+
    '<div class="rcn-bar"><span style="width:'+Math.min(100,r.pct)+'%"></span></div>'+note+
    '<div class="scroll"><table class="rcn-t"><thead><tr><th class="l">PPK</th><th>Plafon (Rp jt)</th><th>Realisasi (Rp jt)</th><th>Sisa (Rp jt)</th><th>Fisik</th><th class="l">Keterangan</th></tr></thead><tbody>'+body+'</tbody></table></div></div>'}).join("")}
 function rp(v){return Math.abs(v)>=1000?"Rp "+num(v/1000,1)+" M":"Rp "+num(v)+" juta"}
