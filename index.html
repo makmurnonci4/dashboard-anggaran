@@ -324,7 +324,7 @@ function render(){
   var hp=plist(b).length>0,pl=p;if(hp&&b.p>0)p=b.p;var fis=p?fw/p:0,pct=p>0?real/p*100:0,gap=pct-tg;if(hp)np+=plist(b).length;
   return{b:b,n:b.name,p:p,real:real,fis:fis,pct:pct,gap:gap,s:nd?"none":st(gap),k:hp?(nd?"none":(us.every(function(u){return u.k=="done"})?"done":"blm")):(us[0]?us[0].k:"none"),kt:hp?us.filter(function(u){return u.k=="done"}).length+" dari "+us.length+" proyek terealisasi":null,need:Math.max(0,tg/100*p-real),sisa:p-real,lm:lm,hp:hp,us:us,pl:pl}});
  ru.forEach(function(y){var r=ur(y,tg);r.n=uname(y);r.b=y.b;r.hp=false;r.us=[];rows.push(r)});
- var AG=ppkAgg(tg);rows.forEach(function(r){P+=r.p;R+=r.real;F+=r.fis*r.p});F=P?F/P:0;var pct=P?R/P*100:0,gap=pct-tg;
+ var AG=ppkAgg(tg);rows.forEach(function(r){P+=r.p;R+=r.real;F+=r.fis*r.p});if(isAdmin&&CFG.pagu>0)P=CFG.pagu;F=P?F/P:0;var pct=P?R/P*100:0,gap=pct-tg;
  var mi=mine().map(uname),kbn=CFG.bidang.filter(isKb).map(kbt);
  $("role").innerHTML=who()+" · "+(isAdmin?"Pimpinan/admin"+(Object.keys(RQ).length?" · <b>"+Object.keys(RQ).length+" permintaan PPK menunggu persetujuan</b>":""):((kbn.length?esc(kbn.join(", ")):"")+(kbn.length&&mi.length?" · ":"")+(mi.length?"PPK "+esc(mi.join(", ")):"")||"Belum terdaftar"));
  var priv=!isAdmin&&!mi.length&&!kbn.length;document.querySelectorAll("#main .band,#main .grid,#rincian,#rekap,#ppkrank").forEach(function(el){el.hidden=priv});
@@ -335,7 +335,7 @@ function render(){
   if(pdn>0){k1l.textContent="Pagu Dinas";$("k1").textContent=rp(pdn);$("k1n").innerHTML="Pagu bidang "+rp(tbd)+"<br>"+(sd<0?"<b>Melebihi pagu Dinas "+rp(-sd)+"</b>":"Sisa pagu Dinas "+rp(sd))+"<br>"+cnt}
   else{k1l.textContent="Pagu bidang";$("k1").textContent=rp(tbd);$("k1n").innerHTML="Pagu Dinas belum diisi (Pengaturan)<br>"+cnt}}
  else{k1l.textContent="Total pagu";$("k1").textContent=rp(P);$("k1n").textContent=rows.length+" bidang/proyek Anda"}
- $("k2").textContent=num(pct,1)+"%";$("k2n").textContent=rp(R)+" · target "+tg+"%";
+ $("k2").textContent=num(pct,1)+"%";$("k2n").textContent=rp(R)+" dari "+rp(P)+" · target "+tg+"%";
  $("k3").textContent=num(F,1)+"%";$("k3n").textContent=F<pct?"Fisik tertinggal dari keuangan":"Fisik sejalan dengan keuangan";
  $("k4").textContent=(gap>=0?"+":"")+num(gap,1)+" poin";$("k4n").textContent=(rows.every(function(r){return r.s=="none"})?SL.none:SL[st(gap)])+" · sisa "+rp(P-R);
  var h="";rows.slice().sort(function(a,b){return a.gap-b.gap}).forEach(function(r){
