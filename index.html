@@ -82,6 +82,23 @@ tfoot td{font-weight:700;border-bottom:0}
 .res button{display:block;width:100%;text-align:left;margin-top:4px}
 .empty{padding:28px 8px;text-align:center;color:var(--mut)}
 td.l,th.l{text-align:left}
+
+.rcn-card{background:var(--surf);border:1px solid var(--line);border-top:3px solid var(--c);border-radius:12px;padding:16px 18px;margin-bottom:14px}
+.rcn-h{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.rcn-h b{font-size:16px}
+.rcn-st{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.rcn-st .k{font-size:12px;color:var(--mut)}
+.rcn-st .v{font-size:17px;font-weight:700;letter-spacing:-.01em}
+.rcn-bar{height:6px;background:var(--bg);border-radius:4px;overflow:hidden;margin:12px 0 6px}
+.rcn-bar span{display:block;height:100%;background:var(--c);border-radius:4px}
+.rcn-note{font-size:12.5px;color:var(--mut);margin-bottom:4px}
+.rcn-t{min-width:560px;margin-top:8px}
+.rcn-t th{font-size:12px;font-weight:600;color:var(--mut);border-bottom:1px solid var(--line)}
+.rcn-t td{border-bottom:1px solid var(--line);vertical-align:top}
+.rcn-t tbody tr:last-child td{border-bottom:0}
+.rcn-t .sub{margin-top:0;font-size:12.5px}
+.bcard{border:1px solid var(--line)!important;border-radius:12px;padding:14px 16px!important;margin:12px 0}
+@media (max-width:560px){.rcn-st{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -128,7 +145,7 @@ td.l,th.l{text-align:left}
 <section class="panel" id="kb" hidden style="margin-bottom:18px"></section>
 <section class="panel" id="rincian" style="margin-bottom:18px">
   <h2>Rincian per bidang</h2>
-  <p class="hint">Setiap bidang menampilkan pagu dan total terealisasinya, beserta sisa, realisasi fisik, dan keterangan (Sesuai target / Perlu dipercepat / Terlambat), lalu rincian tiap PPK di bawahnya dengan keterangan Sudah / Belum teralisasi. Total bidang adalah jumlah dari PPK-nya.</p>
+  <p class="hint">Pagu, realisasi, dan sisa tiap bidang, lalu plafon dan keterangan tiap PPK. Total bidang adalah jumlah dari PPK-nya.</p>
   <div id="rcn"></div>
 </section>
 <section class="panel" id="rekap" style="margin-bottom:18px">
@@ -259,11 +276,14 @@ function pubOpsi(){if(!db||!CFG||!(CFG.bidang||[]).length)return;if(!(isAdmin||C
  var o={bidang:CFG.bidang.map(function(b){return{id:b.id,name:b.name,kl:kbl(b),kt:!!kb(b),units:units(b).map(function(u){return{id:u.id,name:u.name,pt:!!(u.ppk||[]).length}})}})},z=JSON.stringify(o);
  if(z===LOP)return;LOP=z;o.t=Date.now();db.doc("opsi/main").set(o).catch(function(){})}
 function rincian(rows){if(!rows.length)return'<div class="empty">Belum ada bidang.</div>';
- return rows.map(function(r){var us=(r.us&&r.us.length)?r.us:[r],flat=!(r.us&&r.us.length);
-  var body=us.map(function(u){var own=u.u||r.b;return'<tr><td class="l">'+((u.u&&u.u!==r.b&&!flat)?'<span class="sub">'+esc(u.n)+'</span><br>':'')+ppkh(own)+'</td><td>'+num(u.p)+'</td><td>'+num(u.real)+'</td><td>'+num(u.sisa)+'</td><td>'+num(u.pct,1)+'%</td><td>'+num(u.fis,1)+'%</td><td class="l">'+ket(u)+'</td></tr>'}).join("");
-  return'<div style="border-left:5px solid '+bcol(r.b)+';padding:12px 14px;margin-bottom:12px;background:var(--bg);border-radius:10px"><div class="rh"><b style="font-size:16px">'+dot(r.b)+esc(r.n)+'</b></div>'+
-   '<div class="meta" style="font-size:14px;margin:6px 0 8px"><span>Pagu <b style="color:var(--ink)">Rp '+num(r.p)+' juta</b></span><span>Terealisasi <b style="color:var(--ink)">Rp '+num(r.real)+' juta</b> ('+num(r.pct,1)+'%)</span><span>Sisa <b style="color:var(--ink)">Rp '+num(r.sisa)+' juta</b></span>'+(r.hp?'<span>Plafon PPK <b style="color:var(--ink)">Rp '+num(r.pl)+' juta</b>'+(r.pl<r.p?' (belum dialokasikan Rp '+num(r.p-r.pl)+')':r.pl>r.p?' <b style="color:#b3261e">(melebihi pagu)</b>':'')+'</span>':'')+'<span>Fisik <b style="color:var(--ink)">'+num(r.fis,1)+'%</b></span><span>Keterangan <span class="pill '+r.s+'">'+SL[r.s]+'</span></span></div>'+
-   '<div class="scroll"><table style="min-width:640px"><thead><tr><th class="l">PPK</th><th>Plafon anggaran (Rp juta)</th><th>Realisasi keuangan (Rp juta)</th><th>Sisa (Rp juta)</th><th>Keuangan</th><th>Realisasi fisik</th><th class="l">Keterangan</th></tr></thead><tbody>'+body+'</tbody></table></div></div>'}).join("")}
+ function sv(l,v){return'<div><div class="k">'+l+'</div><div class="v">'+v+'</div></div>'}
+ return rows.map(function(r){var us=(r.us&&r.us.length)?r.us:[r],flat=!(r.us&&r.us.length),c=bcol(r.b);
+  var body=us.map(function(u){var own=u.u||r.b;return'<tr><td class="l">'+((u.u&&u.u!==r.b&&!flat)?'<b>'+esc(u.n)+'</b><div class="sub">'+ppkh(own)+'</div>':ppkh(own))+'</td><td>'+num(u.p)+'</td><td>'+num(u.real)+'<div class="sub">'+num(u.pct,1)+'%</div></td><td>'+num(u.sisa)+'</td><td>'+num(u.fis,1)+'%</td><td class="l">'+ket(u)+'</td></tr>'}).join("");
+  var note=r.hp?'<div class="rcn-note">Plafon PPK Rp '+num(r.pl)+' juta'+(r.pl<r.p?' · sisa pagu Rp '+num(r.p-r.pl)+' juta belum dialokasikan':r.pl>r.p?' · <b style="color:var(--late)">melebihi pagu</b>':' · seluruh pagu sudah dialokasikan')+'</div>':'';
+  return'<div class="rcn-card" style="--c:'+c+'"><div class="rcn-h"><b>'+esc(r.n)+'</b><span class="pill '+r.s+'">'+SL[r.s]+'</span></div>'+
+   '<div class="rcn-st">'+sv('Pagu','Rp '+num(r.p)+' jt')+sv('Terealisasi','Rp '+num(r.real)+' jt')+sv('Sisa','Rp '+num(r.sisa)+' jt')+sv('Fisik',num(r.fis,1)+'%')+'</div>'+
+   '<div class="rcn-bar"><span style="width:'+Math.min(100,r.pct)+'%"></span></div>'+note+
+   '<div class="scroll"><table class="rcn-t"><thead><tr><th class="l">PPK</th><th>Plafon (Rp jt)</th><th>Realisasi (Rp jt)</th><th>Sisa (Rp jt)</th><th>Fisik</th><th class="l">Keterangan</th></tr></thead><tbody>'+body+'</tbody></table></div></div>'}).join("")}
 function rp(v){return Math.abs(v)>=1000?"Rp "+num(v/1000,1)+" M":"Rp "+num(v)+" juta"}
 function ppkAgg(tg){var m={},un=0;
  UL.forEach(function(y){var u=(y.u.ppk||[])[0],r=ur(y,tg);
@@ -443,7 +463,7 @@ function renderSet(){
  if(box.contains(document.activeElement)&&document.activeElement!==box)return;
  var h='<h2>Pengaturan bidang, proyek, dan PPK</h2><p class="hint">Ubah nama dan pagu bidang, tunjuk Kepala Bidang, tambahkan proyek bila satu bidang punya beberapa proyek dengan PPK berbeda, lalu daftarkan PPK. Pastikan semua pengguna sudah diberi akses Kontributor pada dashboard ini.</p>'+idBlock()+akBlock()+rqBlock()+catBlock();
  CFG.bidang.forEach(function(b){var l=plist(b),hp=l.length>0,sw=(hp&&b.p>0)?Math.max(0,b.p-bp(b)):0;
-  h+='<div class="sb"><div class="f"><div><label>Nama bidang</label><input type="text" style="min-width:260px" data-bn="'+esc(b.id)+'" value="'+esc(b.name)+'"></div><div><label>Warna</label><input type="color" data-bc="'+esc(b.id)+'" value="'+bcol(b)+'" style="width:54px;height:38px;padding:2px"></div>'+(hp?'<div><label>Pagu bidang (Rp juta)</label><input type="number" min="0" data-bpg="'+esc(b.id)+'" placeholder="'+num(bp(b))+'" value="'+(b.p||"")+'"><div class="sub">Plafon PPK terisi Rp '+num(bp(b))+' juta'+(b.p>0?(bp(b)<b.p?' · sisa belum dialokasikan Rp '+num(b.p-bp(b)):bp(b)>b.p?' · <b style="color:#b3261e">melebihi pagu</b>':' · pas'):' · kosong = pagu mengikuti jumlah plafon')+'</div></div>':'')+'<button type="button" data-bclr="'+esc(b.id)+'">Kosongkan realisasi bidang</button><button type="button" data-bdel="'+esc(b.id)+'">Hapus bidang</button></div>'+kbh(b);
+  h+='<div class="sb bcard"><div class="f"><div><label>Nama bidang</label><input type="text" style="min-width:260px" data-bn="'+esc(b.id)+'" value="'+esc(b.name)+'"></div><div><label>Warna</label><input type="color" data-bc="'+esc(b.id)+'" value="'+bcol(b)+'" style="width:54px;height:38px;padding:2px"></div>'+(hp?'<div><label>Pagu bidang (Rp juta)</label><input type="number" min="0" data-bpg="'+esc(b.id)+'" placeholder="'+num(bp(b))+'" value="'+(b.p||"")+'"><div class="sub">Plafon PPK terisi Rp '+num(bp(b))+' juta'+(b.p>0?(bp(b)<b.p?' · sisa belum dialokasikan Rp '+num(b.p-bp(b)):bp(b)>b.p?' · <b style="color:#b3261e">melebihi pagu</b>':' · pas'):' · kosong = pagu mengikuti jumlah plafon')+'</div></div>':'')+'<button type="button" data-bclr="'+esc(b.id)+'">Kosongkan realisasi bidang</button><button type="button" data-bdel="'+esc(b.id)+'">Hapus bidang</button></div>'+kbh(b);
   if(hp){l.forEach(function(p){h+='<div style="margin:6px 0 10px 18px;padding-left:14px;border-left:3px solid var(--line)">'+uf(p,true)+(sw>0?'<div class="f"><button type="button" data-topup="'+esc(p.id)+'">Tambahkan sisa pagu Rp '+num(sw)+' juta ke plafon ini</button></div>':'')+'</div>'})}else h+=uf(b,false);
   h+='<div class="f">'+(sw>0?'<button class="pri" type="button" data-adds="'+esc(b.id)+'">Alokasikan sisa pagu Rp '+num(sw)+' juta ke proyek baru</button>':'')+'<button type="button" data-addp="'+esc(b.id)+'">Tambah proyek</button></div></div>'});
  h+='<div class="f"><button class="pri" type="button" id="addb">Tambah bidang</button><button type="button" id="defb">Isi bidang bawaan Dinas</button><button type="button" id="clrall">Hapus semua data realisasi</button></div>';
