@@ -145,7 +145,7 @@ td.l,th.l{text-align:left}
 <section class="panel" id="kb" hidden style="margin-bottom:18px"></section>
 <section class="panel" id="rincian" style="margin-bottom:18px">
   <h2>Rincian per bidang</h2>
-  <p class="hint">Pagu, realisasi, dan sisa tiap bidang, lalu plafon dan keterangan tiap PPK. Total bidang adalah jumlah dari PPK-nya.</p>
+  <p class="hint" id="rch"></p>
   <div id="rcn"></div>
 </section>
 <section class="panel" id="rekap" style="margin-bottom:18px">
@@ -230,9 +230,9 @@ function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){retur
 function num(v,d){return Number(v).toLocaleString("id-ID",{maximumFractionDigits:d||0,minimumFractionDigits:d||0})}
 function val(a,m){for(var i=m-1;i>=0;i--)if(a[i]!=null)return a[i];return 0}
 function st(g){var a=(CFG&&CFG.th)||[5,15];return g>=-a[0]?"ok":g>=-a[1]?"warn":"late"}
-var KP={done:"Selesai: fisik 100% dan keuangan terserap penuh",fisik:"Fisik selesai, keuangan belum tuntas",keu:"Keuangan tuntas, fisik belum selesai",blm:"Belum teralisasi",none:"Belum ada input"};
+var KP={done:"Selesai: fisik 100% dan keuangan terserap penuh",fisik:"Fisik selesai, keuangan belum tuntas",keu:"Keuangan tuntas, fisik belum selesai",blm:"Belum terealisasi",none:"Belum ada input"};
 function kp(r){var t=(r.p!=null&&r.real!=null)?' title="Realisasi Rp '+num(r.real)+' juta dari pagu Rp '+num(r.p)+' juta"':'';return'<span class="pill '+(r.k||"none")+'"'+t+'>'+esc(r.kt||KP[r.k||"none"])+'</span>'}
-var SL={done:"Sudah teralisasi",fisik:"Fisik selesai, keuangan belum tuntas",keu:"Keuangan tuntas, fisik belum selesai",none:"Belum ada input",ok:"Sesuai target",warn:"Perlu dipercepat",late:"Terlambat"};
+var SL={done:"Sudah terealisasi",fisik:"Fisik selesai, keuangan belum tuntas",keu:"Keuangan tuntas, fisik belum selesai",none:"Belum ada input",ok:"Sesuai target",warn:"Perlu dipercepat",late:"Terlambat"};
 function nm(u){return NAMES[u]||"Pengguna"}
 function idt(u){return nm(u)+(EM[u]?" · "+EM[u]:"")}
 function who(){var e=myEmail||EM[myId];return"Masuk sebagai <b>"+esc(myName)+"</b>"+(e?" ("+esc(e)+")":"")}
@@ -245,6 +245,8 @@ function eff(b){var r=Array(12).fill(null),f=Array(12).fill(null),mt=Array(12).f
  return{r:r,f:f,mt:mt}}
 function toast(t,bad){var d=$("toast");if(!d){d=document.createElement("div");d.id="toast";d.setAttribute("role","status");d.style.cssText="position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));max-width:90%;padding:10px 16px;border-radius:10px;font-size:14px;z-index:9;box-shadow:0 4px 16px rgba(0,0,0,.25)";document.body.appendChild(d)}d.style.background=bad?"#b3261e":"var(--ink)";d.style.color=bad?"#fff":"var(--bg)";d.textContent=t;d.hidden=false;clearTimeout(d._t);d._t=setTimeout(function(){d.hidden=true},bad?8000:2200)}
 async function saveCFG(){if(document.activeElement&&document.activeElement.tagName=="BUTTON")document.activeElement.blur();render();try{await db.doc("config/main").set(JSON.parse(JSON.stringify(CFG)));toast("Perubahan tersimpan")}catch(e){toast("Gagal menyimpan: "+((e&&(e.message||e.code))||"tidak diketahui")+". Muat ulang halaman lalu coba lagi.",true)}}
+function bpg(b){return(plist(b).length&&b.p>0)?b.p:bp(b)}
+function alur(){var d=CFG.pagu||0;if(!(d>0))return'';var t=CFG.bidang.reduce(function(a,b){return a+bpg(b)},0),n=CFG.bidang.length,x=d-t;return'Pagu Dinas sebesar Rp '+num(d)+' juta telah dialokasikan ke '+n+' bidang sebesar Rp '+num(t)+' juta'+(x>0?'; sisa pagu Rp '+num(x)+' juta belum dialokasikan ke bidang.':x<0?'; <b style="color:var(--late)">alokasi bidang melebihi pagu Dinas sebesar Rp '+num(-x)+' juta.</b>':'; seluruh pagu Dinas telah dialokasikan ke bidang.')}
 function kb(b){return(b.kabid||[]).slice(0,1)[0]||null}
 function isKb(b){var k=kb(b);return!!k&&k===myId}
 function mgr(b){var k=kb(b);return k&&KL[k]&&KL[k].bid===b.id?KL[k]:null}
@@ -267,7 +269,7 @@ function ur(y,tg){var x=y.x,p=y.u.p||0,real=val(x.r,M),fis=val(x.f,M),pct=p>0?re
  for(var k=M-1;k>=0;k--)if(x.mt[k]){lm=x.mt[k];break}
  return{u:y.u,n:y.u.name,p:p,real:real,fis:fis,pct:pct,gap:gap,nd:nd,lm:lm,s:nd?"none":st(gap),k:nd?"none":(pct>=99.995&&fis>=99.995)?"done":pct>=99.995?"keu":fis>=99.995?"fisik":"blm",need:Math.max(0,tg/100*p-real),sisa:p-real}}
 function dt(lm){return lm?new Date(lm.t).toLocaleDateString("id-ID",{day:"numeric",month:"short"})+" · "+esc(nm(lm.u)):"–"}
-function ket(r){var t=r.k=="done"?"Sudah teralisasi":r.k=="none"?"Belum ada input":"Belum teralisasi";return'<span class="pill '+(r.k||"none")+'" title="'+esc(KP[r.k||"none"])+'">'+t+'</span>'}
+function ket(r){var t=r.k=="done"?"Sudah terealisasi":r.k=="none"?"Belum ada input":"Belum terealisasi";return'<span class="pill '+(r.k||"none")+'" title="'+esc(KP[r.k||"none"])+'">'+t+'</span>'}
 function ppkh(u){var s=(u.ppk||[]).map(nm).join(", ");return s?esc(s):'<span class="sub">belum ada</span>'}
 function trow(r,ind,pp){return'<tr'+(ind?' style="font-size:13.5px;color:var(--mut)"':'')+'><td class="l"'+(ind?' style="padding-left:24px"':'')+'>'+(ind?"↳ ":dot(r.b))+esc(r.n)+'</td><td class="l">'+pp+'</td><td>'+num(r.p)+'</td><td>'+num(r.real)+'</td><td>'+num(r.pct,1)+'%</td><td>'+num(r.fis,1)+'%</td><td>'+num(r.sisa)+'</td><td class="l">'+kp(r)+'</td><td class="l"><span class="pill '+r.s+'">'+SL[r.s]+'</span></td><td class="l">'+dt(r.lm)+'</td></tr>'}
 
@@ -279,7 +281,7 @@ function rincian(rows){if(!rows.length)return'<div class="empty">Belum ada bidan
  function sv(l,v){return'<div><div class="k">'+l+'</div><div class="v">'+v+'</div></div>'}
  return rows.map(function(r){var us=(r.us&&r.us.length)?r.us:[r],flat=!(r.us&&r.us.length),c=bcol(r.b);
   var body=us.map(function(u){var own=u.u||r.b;return'<tr><td class="l">'+((u.u&&u.u!==r.b&&!flat)?'<b>'+esc(u.n)+'</b><div class="sub">'+ppkh(own)+'</div>':ppkh(own))+'</td><td>'+num(u.p)+'</td><td>'+num(u.real)+'<div class="sub">'+num(u.pct,1)+'%</div></td><td>'+num(u.sisa)+'</td><td>'+num(u.fis,1)+'%</td><td class="l">'+ket(u)+'</td></tr>'}).join("");
-  var note=r.hp?'<div class="rcn-note">Plafon PPK Rp '+num(r.pl)+' juta'+(r.pl<r.p?' · sisa pagu Rp '+num(r.p-r.pl)+' juta belum dialokasikan':r.pl>r.p?' · <b style="color:var(--late)">melebihi pagu</b>':' · seluruh pagu sudah dialokasikan')+'</div>':'';
+  var note=r.hp?'<div class="rcn-note">Dari pagu bidang, Rp '+num(r.pl)+' juta telah dialokasikan ke PPK sebagai plafon anggaran'+(r.pl<r.p?'; sisa Rp '+num(r.p-r.pl)+' juta belum dialokasikan.':r.pl>r.p?'; <b style="color:var(--late)">alokasi melebihi pagu bidang.</b>':'; seluruh pagu bidang telah dialokasikan.')+'</div>':'';
   return'<div class="rcn-card" style="--c:'+c+'"><div class="rcn-h"><b>'+esc(r.n)+'</b><span class="pill '+r.s+'">'+SL[r.s]+'</span></div>'+
    '<div class="rcn-st">'+sv('Pagu','Rp '+num(r.p)+' jt')+sv('Terealisasi','Rp '+num(r.real)+' jt')+sv('Sisa','Rp '+num(r.sisa)+' jt')+sv('Fisik',num(r.fis,1)+'%')+'</div>'+
    '<div class="rcn-bar"><span style="width:'+Math.min(100,r.pct)+'%"></span></div>'+note+
@@ -320,7 +322,7 @@ function render(){
  var rows=fb.map(function(b){var us=UL.filter(function(y){return y.b===b}).map(function(y){return ur(y,tg)}),p=0,real=0,fw=0,nd=true,lm=null;
   us.forEach(function(r){p+=r.p;real+=r.real;fw+=r.fis*r.p;if(!r.nd)nd=false;if(r.lm&&(!lm||r.lm.t>lm.t))lm=r.lm});
   var hp=plist(b).length>0,pl=p;if(hp&&b.p>0)p=b.p;var fis=p?fw/p:0,pct=p>0?real/p*100:0,gap=pct-tg;if(hp)np+=plist(b).length;
-  return{b:b,n:b.name,p:p,real:real,fis:fis,pct:pct,gap:gap,s:nd?"none":st(gap),k:hp?(nd?"none":(us.every(function(u){return u.k=="done"})?"done":"blm")):(us[0]?us[0].k:"none"),kt:hp?us.filter(function(u){return u.k=="done"}).length+" dari "+us.length+" proyek teralisasi":null,need:Math.max(0,tg/100*p-real),sisa:p-real,lm:lm,hp:hp,us:us,pl:pl}});
+  return{b:b,n:b.name,p:p,real:real,fis:fis,pct:pct,gap:gap,s:nd?"none":st(gap),k:hp?(nd?"none":(us.every(function(u){return u.k=="done"})?"done":"blm")):(us[0]?us[0].k:"none"),kt:hp?us.filter(function(u){return u.k=="done"}).length+" dari "+us.length+" proyek terealisasi":null,need:Math.max(0,tg/100*p-real),sisa:p-real,lm:lm,hp:hp,us:us,pl:pl}});
  ru.forEach(function(y){var r=ur(y,tg);r.n=uname(y);r.b=y.b;r.hp=false;r.us=[];rows.push(r)});
  var AG=ppkAgg(tg);AG.list.forEach(function(a){P+=a.p;R+=a.real;F+=a.fw});F=P?F/P:0;var pct=P?R/P*100:0,gap=pct-tg;
  var mi=mine().map(uname),kbn=CFG.bidang.filter(isKb).map(kbt);
@@ -339,7 +341,7 @@ function render(){
  var tb="";rows.forEach(function(r){tb+=trow(r,false,r.hp?r.us.length+" proyek":ppkh(r.u||r.b));if(r.hp)r.us.forEach(function(u){tb+=trow(u,true,ppkh(u.u))})});
  $("tb").innerHTML=tb;
  $("tf").innerHTML='<tr><td class="l">Total seluruh PPK</td><td></td><td>'+num(P)+'</td><td>'+num(R)+'</td><td>'+num(pct,1)+'%</td><td>'+num(F,1)+'%</td><td>'+num(P-R)+'</td><td></td><td></td><td></td></tr>';
- $("pr").innerHTML=ppkRank(AG,tg);$("rcn").innerHTML=rincian(rows);
+ $("pr").innerHTML=ppkRank(AG,tg);$("rcn").innerHTML=rincian(rows);$("rch").innerHTML='Pagu Dinas dialokasikan ke bidang, kemudian pagu bidang dialokasikan ke PPK sebagai plafon anggaran. '+alur();
  var al="";rows.filter(function(r){return r.s=="warn"||r.s=="late"}).sort(function(a,b){return a.gap-b.gap}).forEach(function(r){al+='<div class="alert '+(r.s=="warn"?"warn":"")+'"><b>'+esc(r.n)+'</b> berada '+num(Math.abs(r.gap),1)+' poin di bawah target. Perlu tambahan realisasi sekitar <b>Rp '+num(r.need)+' juta</b> untuk menyusul target bulan ini.</div>'});
  $("alerts").innerHTML=al||(rows.every(function(r){return r.s=="none"})?'<div class="alert" style="border-color:var(--mut);background:var(--bg)">Belum ada realisasi yang diinput.</div>':'<div class="alert" style="border-color:var(--ok);background:var(--okb)">Seluruh bidang sesuai target bulan ini.</div>');
  draw();renderInput(false);renderSet();renderKb();cleanReq();need();
@@ -453,7 +455,7 @@ function pdNote(){var n=Object.keys(PD).filter(function(u){return!AK[PD[u].email
 function akBlock(){if(!window.FBMODE)return"";var ks=Object.keys(AK).sort(),h=pdBlock()+'<div class="sb"><h2 style="font-size:15px">Akses pengguna</h2><p class="hint">Hanya email yang terdaftar di sini yang bisa membuka dashboard. Daftarkan email akun Google semua admin, Kepala Bidang, dan PPK.</p>';
  ks.forEach(function(e){h+='<div class="f"><div><b>'+esc(e)+'</b><div class="sub">'+(AK[e].role=="admin"?"Admin":"Pengguna")+'</div></div><button type="button" data-ake="'+esc(e)+'">Hapus akses</button></div>'});
  return h+'<div class="f"><div><label for="ake">Email</label><input type="email" id="ake" placeholder="nama@gmail.com"></div><div><label for="akr">Peran</label><select id="akr"><option value="user">Pengguna</option><option value="admin">Admin</option></select></div><button class="pri" type="button" id="aka">Tambahkan</button></div></div>'}
-function idBlock(){return'<div class="sb"><h2 style="font-size:15px">Identitas instansi</h2><div class="f"><div><label>Nama dinas / instansi</label><input type="text" style="min-width:320px" data-org="1" value="'+esc(CFG.org||"Dinas Pendidikan, Pemuda dan Olahraga")+'"></div><div><label>Tahun anggaran</label><input type="number" style="width:100px" data-thn="1" value="'+(CFG.tahun||2026)+'"></div></div></div>'}
+function idBlock(){return'<div class="sb"><h2 style="font-size:15px">Identitas instansi</h2><div class="f"><div><label>Nama dinas / instansi</label><input type="text" style="min-width:320px" data-org="1" value="'+esc(CFG.org||"Dinas Pendidikan, Pemuda dan Olahraga")+'"></div><div><label>Tahun anggaran</label><input type="number" style="width:100px" data-thn="1" value="'+(CFG.tahun||2026)+'"></div><div><label>Pagu Dinas (Rp juta)</label><input type="number" min="0" style="width:150px" data-pgd="1" value="'+(CFG.pagu||"")+'"></div></div><p class="hint" style="margin:0">Pagu Dinas dialokasikan ke bidang, kemudian pagu bidang dialokasikan ke PPK sebagai plafon anggaran. '+alur()+'</p></div>'}
 function kbh(b){var k=kb(b);return'<div>'+kbl(b)+': '+(k?'<span class="chip">'+esc(idt(k))+'<button type="button" aria-label="Cabut Kepala Bidang" data-rmk="'+esc(b.id)+'">×</button></span>':'<span class="sub">belum ada</span>')+'</div>'+(k?'':'<div class="f"><div><label>Tambah '+kbl(b)+'</label><input type="text" placeholder="Cari nama atau email" data-qk="'+esc(b.id)+'"><div class="res"></div></div></div>')}
 function pplk(u){var id=u.id,h='<div>PPK: '+((u.ppk||[]).map(function(x){return'<span class="chip">'+esc(idt(x))+'<button type="button" aria-label="Cabut PPK" data-rm="'+esc(id)+'|'+esc(x)+'">×</button></span>'}).join("")||'<span class="sub">belum ada</span>')+'</div>';
  return h+((u.ppk||[]).length?'<div class="msg">Sudah memiliki PPK. Untuk menggantinya, cabut dulu dengan tombol ×.</div>':'<div class="f"><div><label>Tambah PPK</label><input type="text" placeholder="Cari nama atau email" data-q="'+esc(id)+'"><div class="res"></div></div></div>')}
@@ -461,17 +463,18 @@ function uf(u,pj,nc){return'<div class="f">'+(pj?'<div><label>Nama proyek</label
 function renderSet(){
  var box=$("set");box.hidden=!isAdmin;if(!isAdmin)return;
  if(box.contains(document.activeElement)&&document.activeElement!==box)return;
- var h='<h2>Pengaturan bidang, proyek, dan PPK</h2><p class="hint">Ubah nama dan pagu bidang, tunjuk Kepala Bidang, tambahkan proyek bila satu bidang punya beberapa proyek dengan PPK berbeda, lalu daftarkan PPK. Pastikan semua pengguna sudah diberi akses Kontributor pada dashboard ini.</p>'+idBlock()+akBlock()+rqBlock()+catBlock();
+ var h='<h2>Pengaturan bidang, proyek, dan PPK</h2><p class="hint">Isi pagu Dinas, alokasikan ke bidang, kemudian alokasikan pagu tiap bidang ke PPK sebagai plafon anggaran. Ubah nama dan pagu bidang, tunjuk Kepala Bidang, tambahkan proyek bila satu bidang punya beberapa proyek dengan PPK berbeda, lalu daftarkan PPK. Pastikan semua pengguna sudah diberi akses Kontributor pada dashboard ini.</p>'+idBlock()+akBlock()+rqBlock()+catBlock();
  CFG.bidang.forEach(function(b){var l=plist(b),hp=l.length>0,sw=(hp&&b.p>0)?Math.max(0,b.p-bp(b)):0;
-  h+='<div class="sb bcard"><div class="f"><div><label>Nama bidang</label><input type="text" style="min-width:260px" data-bn="'+esc(b.id)+'" value="'+esc(b.name)+'"></div><div><label>Warna</label><input type="color" data-bc="'+esc(b.id)+'" value="'+bcol(b)+'" style="width:54px;height:38px;padding:2px"></div>'+(hp?'<div><label>Pagu bidang (Rp juta)</label><input type="number" min="0" data-bpg="'+esc(b.id)+'" placeholder="'+num(bp(b))+'" value="'+(b.p||"")+'"><div class="sub">Plafon PPK terisi Rp '+num(bp(b))+' juta'+(b.p>0?(bp(b)<b.p?' · sisa belum dialokasikan Rp '+num(b.p-bp(b)):bp(b)>b.p?' · <b style="color:#b3261e">melebihi pagu</b>':' · pas'):' · kosong = pagu mengikuti jumlah plafon')+'</div></div>':'')+'<button type="button" data-bclr="'+esc(b.id)+'">Kosongkan realisasi bidang</button><button type="button" data-bdel="'+esc(b.id)+'">Hapus bidang</button></div>'+kbh(b);
-  if(hp){l.forEach(function(p){h+='<div style="margin:6px 0 10px 18px;padding-left:14px;border-left:3px solid var(--line)">'+uf(p,true)+(sw>0?'<div class="f"><button type="button" data-topup="'+esc(p.id)+'">Tambahkan sisa pagu Rp '+num(sw)+' juta ke plafon ini</button></div>':'')+'</div>'})}else h+=uf(b,false);
-  h+='<div class="f">'+(sw>0?'<button class="pri" type="button" data-adds="'+esc(b.id)+'">Alokasikan sisa pagu Rp '+num(sw)+' juta ke proyek baru</button>':'')+'<button type="button" data-addp="'+esc(b.id)+'">Tambah proyek</button></div></div>'});
+  h+='<div class="sb bcard"><div class="f"><div><label>Nama bidang</label><input type="text" style="min-width:260px" data-bn="'+esc(b.id)+'" value="'+esc(b.name)+'"></div><div><label>Warna</label><input type="color" data-bc="'+esc(b.id)+'" value="'+bcol(b)+'" style="width:54px;height:38px;padding:2px"></div>'+(hp?'<div><label>Pagu bidang (Rp juta)</label><input type="number" min="0" data-bpg="'+esc(b.id)+'" placeholder="'+num(bp(b))+'" value="'+(b.p||"")+'"><div class="sub">Telah dialokasikan ke PPK Rp '+num(bp(b))+' juta'+(b.p>0?(bp(b)<b.p?' · sisa Rp '+num(b.p-bp(b))+' juta belum dialokasikan ke PPK':bp(b)>b.p?' · <b style="color:#b3261e">melebihi pagu bidang</b>':' · seluruh pagu bidang telah dialokasikan ke PPK'):' · kosongkan bila pagu bidang mengikuti jumlah plafon PPK')+'</div></div>':'')+'<button type="button" data-bclr="'+esc(b.id)+'">Kosongkan realisasi bidang</button><button type="button" data-bdel="'+esc(b.id)+'">Hapus bidang</button></div>'+kbh(b);
+  if(hp){l.forEach(function(p){h+='<div style="margin:6px 0 10px 18px;padding-left:14px;border-left:3px solid var(--line)">'+uf(p,true)+(sw>0?'<div class="f"><button type="button" data-topup="'+esc(p.id)+'">Tambahkan sisa Rp '+num(sw)+' juta ke plafon ini</button></div>':'')+'</div>'})}else h+=uf(b,false);
+  h+='<div class="f">'+(sw>0?'<button class="pri" type="button" data-adds="'+esc(b.id)+'">Alokasikan sisa Rp '+num(sw)+' juta ke proyek baru</button>':'')+'<button type="button" data-addp="'+esc(b.id)+'">Tambah proyek</button></div></div>'});
  h+='<div class="f"><button class="pri" type="button" id="addb">Tambah bidang</button><button type="button" id="defb">Isi bidang bawaan Dinas</button><button type="button" id="clrall">Hapus semua data realisasi</button></div>';
  box.innerHTML=h;
 }
 function onChange(e){var t=e.target,r;
  if(isAdmin){
   if(t.dataset.org){var o=t.value.trim();if(o){CFG.org=o.slice(0,120);saveCFG()}return}
+  if(t.dataset.pgd){var vd=t.value.trim()===""?0:parseFloat(t.value);if(vd>=0){CFG.pagu=vd;saveCFG()}return}
   if(t.dataset.thn){var y=parseInt(t.value);if(y>=2000&&y<=2100){CFG.tahun=y;saveCFG()}return}
   if(t.dataset.th){var a=(CFG.th||[5,15]).slice(),v=parseFloat(t.value);if(!(v>=0)){toast("Isi angka 0 atau lebih",true);return}a[+t.dataset.th]=v;if(a[1]<a[0]){toast("Batas kedua harus sama atau lebih besar dari batas pertama",true);return}CFG.th=a;saveCFG();return}
   if(t.dataset.tg){var g=T().slice(),v2=parseFloat(t.value);if(!(v2>=0&&v2<=100)){toast("Target harus antara 0 dan 100",true);return}g[+t.dataset.tg]=v2;CFG.tgt=g;saveCFG();return}
