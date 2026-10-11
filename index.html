@@ -553,7 +553,7 @@ function mkUnit(b,name,ppk){var hd=hold(b);hd.proyek=hd.proyek||[];
 function ppkTable(b,adm){
  var l=plist(b),hp=l.length>0,h='<div class="scroll"><table class="xl"><thead><tr><th class="l">Nama PPK / kegiatan</th><th class="l">Email</th><th>Kelola anggaran (Rp juta)</th><th class="l"></th></tr></thead><tbody>';
  if(!hp){var pk=(b.ppk||[])[0];
-  h+=pk?'<tr class="pg"><td class="l"><span class="chip">'+esc(nm(pk))+'<button type="button" aria-label="Cabut PPK" data-rm="'+esc(b.id)+'|'+esc(pk)+'">×</button></span> <span class="sub">'+(kgList(pk,b.id).length?'mengelola sebagian pagu bidang (sesuai kegiatan yang didata)':'mengelola seluruh pagu bidang')+'</span></td><td class="l">'+eml(pk)+'</td><td>'+num(up(b))+'</td><td></td></tr>':'<tr><td class="l sub" colspan="4">Belum ada PPK atau kegiatan.</td></tr>'}
+  h+=pk?'<tr class="pg"><td class="l"><span class="chip">'+esc(nm(pk))+'<button type="button" aria-label="Cabut PPK" data-rm="'+esc(b.id)+'|'+esc(pk)+'">×</button></span> <span class="sub">'+(kgList(pk,b.id).length?'anggaran sesuai kegiatan yang diisi PPK':'PPK belum mengisi kegiatan dan anggaran')+'</span></td><td class="l">'+eml(pk)+'</td><td>'+num(up(b))+'</td><td class="l"><button type="button" data-addk="'+esc(b.id)+'|'+esc(pk)+'">Atur kegiatan &amp; anggaran</button></td></tr>':'<tr><td class="l sub" colspan="4">Belum ada PPK atau kegiatan.</td></tr>'}
  else{var gs=[],gm={};l.forEach(function(u){var id=(u.ppk||[])[0]||"";var g=gm[id];if(!g){g=gm[id]={id:id,us:[]};gs.push(g)}g.us.push(u)});
   gs.sort(function(a,c){return(a.id==="")-(c.id==="")});
   gs.forEach(function(g){var tot=g.us.reduce(function(a,u){return a+(u.p||0)},0);
