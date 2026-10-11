@@ -337,7 +337,7 @@ function kgInit(bx,u){if(!bx)return;
   if(sisa<-0.0001){m.className="msg e";m.textContent="Total kegiatan Rp "+num(t)+" juta melebihi pagu bidang Rp "+num(pagu)+" juta (lebih Rp "+num(-sisa)+" juta). Kurangi anggaran kegiatan."}
   else if(sisa>0.0001){m.className="msg";m.textContent="Terdata Rp "+num(t)+" juta dari pagu Rp "+num(pagu)+" juta. Anggaran yang Anda kelola Rp "+num(t)+" juta. Sisa pagu Rp "+num(sisa)+" juta belum dibagi: tambah kegiatan lagi, atau sisanya dibagikan Kepala Bidang ke PPK lain."}
   else{m.className="msg g";m.textContent="Seluruh pagu Rp "+num(pagu)+" juta sudah dibagi ke kegiatan."}}
- function draw(){var h='<h2 style="font-size:15px">Kegiatan yang Anda jalankan</h2><p class="hint">Pagu bidang Rp '+num(pagu)+' juta sudah ditetapkan dan tidak dapat diubah PPK. Anggaran Anda tidak harus sama dengan pagu: isi kegiatan yang Anda jalankan, jumlahnya menjadi anggaran Anda dan tidak boleh melebihi pagu.</p>';
+ function draw(){var h='<h2 style="font-size:15px">Kegiatan yang Anda jalankan</h2>';
   D.rows.forEach(function(k,i){h+='<div class="f"><div><label>Nama kegiatan</label><input type="text" maxlength="80" style="min-width:230px" data-kgn="'+i+'" placeholder="mis. Rehabilitasi ruang kelas" value="'+esc(k.n||"")+'"></div><div><label>Anggaran (Rp juta)</label><input type="number" min="0" step="any" data-kgp="'+i+'" value="'+(k.p||"")+'"></div><button type="button" data-kgdel="'+i+'">Hapus</button></div>'});
   h+='<div class="f"><button type="button" data-kgadd="1">+ Tambah kegiatan</button><button class="pri" type="button" data-kgsv="1">Simpan kegiatan</button></div><div class="msg kgsum"></div>';
   bx.innerHTML=h;sum()}
