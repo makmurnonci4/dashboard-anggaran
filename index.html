@@ -309,8 +309,8 @@ function rincian(rows){if(!rows.length)return'<div class="empty">Belum ada bidan
   gs.sort(function(a,c2){return(a.id==="")-(c2.id==="")});
   var body="";
   gs.forEach(function(g){var pct=g.p>0?g.real/g.p*100:0,fis=g.p?g.fw/g.p:0,k=g.nd?"none":(pct>=99.995&&fis>=99.995)?"done":pct>=99.995?"keu":fis>=99.995?"fisik":"blm";
-   body+='<tr class="pg"><td class="l"><b>'+(g.id?esc(nm(g.id)):'<span class="sub">Belum ada PPK</span>')+'</b>'+((g.us.length==1&&g.us[0].u===b&&b.kn)?'<div class="sub">'+esc(b.kn)+'</div>':'')+'</td><td class="l">'+(g.id&&EM[g.id]?esc(EM[g.id]):'')+'</td><td>'+num(g.p)+'</td><td>'+num(g.real)+'</td><td>'+num(pct,1)+'%</td><td>'+num(fis,1)+'%</td><td class="l">'+kp({k:k,p:g.p,real:g.real})+'</td></tr>';
-   if(g.us.some(function(u){return u.u!==b}))g.us.forEach(function(u){body+='<tr class="kg"><td class="l" style="padding-left:26px">↳ '+esc(u.u===b?(u.u.kn||"Seluruh bidang"):u.n)+'</td><td></td><td>'+num(u.p)+'</td><td>'+num(u.real)+'</td><td>'+num(u.pct,1)+'%</td><td>'+num(u.fis,1)+'%</td><td class="l">'+kp(u)+'</td></tr>'})});
+   body+='<tr class="pg"><td class="l"><b>'+(g.id?esc(nm(g.id)):'<span class="sub">Belum ada PPK</span>')+'</b>'+'</td><td class="l">'+(g.id&&EM[g.id]?esc(EM[g.id]):'')+'</td><td>'+num(g.p)+'</td><td>'+num(g.real)+'</td><td>'+num(pct,1)+'%</td><td>'+num(fis,1)+'%</td><td class="l">'+kp({k:k,p:g.p,real:g.real})+'</td></tr>';
+   if(g.us.some(function(u){return u.u!==b}))g.us.forEach(function(u){body+='<tr class="kg"><td class="l" style="padding-left:26px">↳ '+esc(u.u===b?"Seluruh bidang":u.n)+'</td><td></td><td>'+num(u.p)+'</td><td>'+num(u.real)+'</td><td>'+num(u.pct,1)+'%</td><td>'+num(u.fis,1)+'%</td><td class="l">'+kp(u)+'</td></tr>'});body+=kgRows(g,b)});
   var bel=r.p-r.al;
   return'<div class="rb" style="--bc:'+c+'"><div class="rh"><span class="rt">'+dot(b)+esc(r.n)+'</span><span class="pill '+r.s+'">'+SL[r.s]+'</span></div>'+who+
    '<div class="kv">'+(r.own?'<div><span>Anggaran Anda</span><b>Rp '+num(r.p)+' juta</b></div>':'<div><span>Pagu bidang</span><b>Rp '+num(r.p)+' juta</b></div><div><span>Dikelola PPK</span><b>Rp '+num(r.al)+' juta</b>'+(bel>0.0001?' <span style="display:inline">· sisa '+num(bel)+'</span>':'')+'</div>')+'<div><span>Terealisasi</span><b>Rp '+num(r.real)+' juta</b> <span style="display:inline">· '+num(r.pct,1)+'%</span></div><div><span>Fisik</span><b>'+num(r.fis,1)+'%</b></div></div>'+
@@ -323,12 +323,41 @@ function alur(PD,SB,P,R){var seg=[{n:"Terealisasi",v:R,c:"#10b981"},{n:"Dikelola
  var warn=(CFG.pagu>0&&SB>PD+0.0001)?'<div class="alert">Total pagu bidang (Rp '+num(SB)+' juta) melebihi pagu dinas (Rp '+num(PD)+' juta) sebesar Rp '+num(SB-PD)+' juta.</div>':'';
  return'<h2>Alokasi pagu dinas</h2><p class="hint">Dari pagu dinas dibagi ke bidang, lalu ke PPK, sampai terealisasi.</p><div class="kv"><div><span>Pagu dinas</span><b>Rp '+num(PD)+' juta</b></div><div><span>Dialokasikan ke bidang</span><b>Rp '+num(SB)+' juta</b></div><div><span>Dikelola PPK</span><b>Rp '+num(P)+' juta</b></div><div><span>Terealisasi</span><b>Rp '+num(R)+' juta</b> <span style="display:inline">· '+num(PD?R/PD*100:0,1)+'% dari pagu dinas</span></div></div>'+bar+'<div class="legend2">'+lg+'</div>'+warn+(CFG.pagu>0?'':'<div class="msg">Pagu dinas belum diisi, jadi memakai jumlah pagu bidang. Isi di Pengaturan, bagian Identitas instansi.</div>')}
 var FXD=0;
+
+var KGD=null;
+function kgList(id,uid){var d=id&&RE[id],l=d&&d.kg&&d.kg[uid];return Array.isArray(l)?l:[]}
+function kgTot(l){return l.reduce(function(a,k){return a+(+k.p||0)},0)}
+function kgInit(box,u){var bx=$("kgbox");if(!bx)return;
+ if(!KGD||KGD.id!==u.id)KGD={id:u.id,rows:kgList(myId,u.id).map(function(k){return{id:k.id,n:k.n,p:k.p}})};
+ var pagu=u.p||0;
+ function sum(){var t=kgTot(KGD.rows),sisa=pagu-t,m=$("kgsum");if(!m)return;
+  if(!(pagu>0)){m.className="msg";m.textContent="Pagu bidang belum ditetapkan admin.";return}
+  if(sisa<-0.0001){m.className="msg e";m.textContent="Total kegiatan Rp "+num(t)+" juta melebihi pagu bidang Rp "+num(pagu)+" juta (lebih Rp "+num(-sisa)+" juta). Kurangi anggaran kegiatan."}
+  else if(sisa>0.0001){m.className="msg";m.textContent="Terdata Rp "+num(t)+" juta dari pagu Rp "+num(pagu)+" juta. Masih ada sisa Rp "+num(sisa)+" juta yang belum punya kegiatan. Disarankan menambah kegiatan lagi sampai seluruh pagu terpakai."}
+  else{m.className="msg g";m.textContent="Seluruh pagu Rp "+num(pagu)+" juta sudah dibagi ke kegiatan."}}
+ function draw(){var h='<h2 style="font-size:15px">Kegiatan yang Anda jalankan</h2><p class="hint">Pagu bidang Rp '+num(pagu)+' juta sudah ditetapkan dan tidak dapat diubah PPK. Bagi pagu tersebut ke kegiatan yang Anda jalankan; jumlah anggaran kegiatan tidak boleh melebihi pagu.</p>';
+  KGD.rows.forEach(function(k,i){h+='<div class="f"><div><label>Nama kegiatan</label><input type="text" maxlength="80" style="min-width:230px" data-kgn="'+i+'" placeholder="mis. Rehabilitasi ruang kelas" value="'+esc(k.n||"")+'"></div><div><label>Anggaran (Rp juta)</label><input type="number" min="0" step="any" data-kgp="'+i+'" value="'+(k.p||"")+'"></div><button type="button" data-kgdel="'+i+'">Hapus</button></div>'});
+  h+='<div class="f"><button type="button" data-kgadd="1">+ Tambah kegiatan</button><button class="pri" type="button" data-kgsv="1">Simpan kegiatan</button></div><div class="msg" id="kgsum"></div>';
+  bx.innerHTML=h;sum()}
+ bx.oninput=function(e){var t=e.target;if(t.dataset.kgn!==undefined)KGD.rows[+t.dataset.kgn].n=t.value;else if(t.dataset.kgp!==undefined)KGD.rows[+t.dataset.kgp].p=parseFloat(t.value)||0;else return;sum()};
+ bx.onclick=async function(e){var t=e.target.closest("button");if(!t)return;
+  if(t.dataset.kgadd){var sisa=Math.max(0,pagu-kgTot(KGD.rows));KGD.rows.push({id:"k"+Date.now().toString(36),n:"",p:sisa||0});draw();return}
+  if(t.dataset.kgdel!==undefined){KGD.rows.splice(+t.dataset.kgdel,1);draw();return}
+  if(t.dataset.kgsv){var m=$("kgsum"),rows=KGD.rows.filter(function(k){return(k.n||"").trim()||k.p});
+   if(rows.some(function(k){return!(k.n||"").trim()})){m.className="msg e";m.textContent="Isi nama untuk setiap kegiatan.";return}
+   if(kgTot(rows)>pagu+0.0001){m.className="msg e";m.textContent="Total kegiatan melebihi pagu bidang. Kurangi anggaran kegiatan.";return}
+   try{var d=RE[myId]?JSON.parse(JSON.stringify(RE[myId])):{};d.e=d.e||{};d.kg=d.kg||{};d.kg[u.id]=rows.map(function(k){return{id:k.id,n:k.n.trim().slice(0,80),p:+k.p||0,t:Date.now()}});await db.doc("realisasi/"+myId).set(d);KGD=null;toast("Kegiatan tersimpan")}catch(x){m.className="msg e";m.textContent="Gagal menyimpan kegiatan. Coba lagi."}}};
+ draw()}
+function kgRows(g,b){var id=g.id;if(!id||g.us.some(function(u){return u.u!==b}))return"";var l=kgList(id,b.id),pagu=b.p||0,sisa=pagu-kgTot(l),h="";
+ l.forEach(function(k){h+='<tr class="kg"><td class="l" style="padding-left:26px">↳ '+esc(k.n)+'</td><td></td><td>'+num(k.p)+'</td><td></td><td></td><td></td><td></td></tr>'});
+ if(pagu>0&&sisa>0.0001)h+='<tr class="kg"><td class="l" colspan="7" style="padding-left:26px;color:var(--late)">'+(l.length?'Sisa pagu Rp '+num(sisa)+' juta belum punya kegiatan.':'Belum ada kegiatan yang didata.')+' PPK disarankan menambah kegiatan sampai seluruh pagu terpakai.</td></tr>';
+ return h}
 function applyNames(){var re=/^(proyek|anggaran)\s+(baru|\d+)$/i,chC=false,kls={};
  function fx(n){var m=re.exec(n||"");return m?"Kegiatan "+m[2].toLowerCase():n}
  CFG.bidang.forEach(function(b){if(!kb(b)||!mgr(b))(b.proyek||[]).forEach(function(u){var n=fx(u.name);if(n!==u.name){u.name=n;chC=true}})});
  Object.keys(KL).forEach(function(k){(KL[k].proyek||[]).forEach(function(u){var n=fx(u.name);if(n!==u.name){u.name=n;kls[k]=1}})});
  if(!FXD){if(isAdmin){if(chC||Object.keys(kls).length){FXD=1;setTimeout(function(){if(chC)saveCFG();Object.keys(kls).forEach(saveKL)},0)}}else if(kls[myId]){FXD=1;setTimeout(function(){saveKL(myId)},0)}}
- allUnits().forEach(function(x){var u=x.u,id=(u.ppk||[])[0],d=id&&RE[id];if(!d)return;var ov=d.nm&&d.nm[u.id];if(u!==x.b&&ov&&ov.n&&ov.t>(u.nt||0))u.name=ov.n;var kn=d.kn&&d.kn[u.id];if(kn&&kn.n&&kn.t>(u.kt||0))u.kn=kn.n;var pg=d.pg&&d.pg[u.id];if(pg&&pg.p>=0&&pg.t>(u.pt||0))u.p=pg.p})}
+ allUnits().forEach(function(x){var u=x.u,id=(u.ppk||[])[0],d=id&&RE[id];if(!d)return;var ov=d.nm&&d.nm[u.id];if(u!==x.b&&ov&&ov.n&&ov.t>(u.nt||0))u.name=ov.n;})}
 function rp(v){return Math.abs(v)>=1000?"Rp "+num(v/1000,1)+" M":"Rp "+num(v)+" juta"}
 function ppkAgg(tg){var m={},un=0;
  UL.forEach(function(y){var u=(y.u.ppk||[])[0],r=ur(y,tg);
@@ -445,13 +474,13 @@ function renderInput(force){
  var ob=L.filter(function(o){return o.u.id==IB})[0],u=ob.u,isK=u!==ob.b,x=UL.filter(function(y){return y.u===u})[0].x,prev=M>1?val(x.r,M-1):0,pf=M>1?val(x.f,M-1):0,cr=x.r[M-1],cf=x.f[M-1];
  box.innerHTML='<h2>Input realisasi '+BLN[M-1]+'</h2><p class="hint">Isi angka kumulatif sejak Januari sampai akhir '+BLN[M-1]+'. Bulan sebelumnya: Rp '+num(prev)+' juta, fisik '+num(pf,1)+'%.</p><div class="f">'+
  '<div><label for="ib">Bidang / kegiatan</label><select id="ib">'+L.map(function(o){return'<option value="'+esc(o.u.id)+'"'+(o.u.id==IB?" selected":"")+'>'+esc(uname(o))+'</option>'}).join("")+'</select></div>'+
- '<div><label for="ikn">Nama kegiatan yang dijalankan</label><input id="ikn" type="text" maxlength="80" style="min-width:230px" placeholder="mis. Rehabilitasi ruang kelas SD" value="'+esc(isK?u.name:(u.kn||""))+'"></div><div><label for="ipg">Anggaran yang dikelola (Rp juta)</label><input id="ipg" type="number" min="0" step="any" value="'+(u.p||"")+'"></div>'+
+ (isK?'<div><label for="ikn">Nama kegiatan (dapat Anda ubah)</label><input id="ikn" type="text" style="min-width:230px" value="'+esc(u.name)+'"></div>':'')+
  '<div><label for="ir">Realisasi keuangan (Rp juta)</label><input id="ir" type="number" min="0" step="any" value="'+(cr==null?"":cr)+'" placeholder="mis. '+num(prev)+'"></div>'+
  '<div><label for="if">Realisasi fisik (%)</label><input id="if" type="number" min="0" max="100" step="0.1" value="'+(cf==null?"":cf)+'"></div>'+
- '<button class="pri" id="isv" type="button">Simpan realisasi</button></div><div class="msg" id="imsg"></div>';
+ '<button class="pri" id="isv" type="button">Simpan realisasi</button></div><div class="msg" id="imsg"></div>'+(isK?'':'<div id="kgbox" style="margin-top:14px"></div>');
  $("ib").onchange=function(){IB=this.value;renderInput(true)};
- if($("ikn"))$("ikn").onchange=async function(){var v=this.value.trim().slice(0,80);if(!v)return;try{var d=RE[myId]?JSON.parse(JSON.stringify(RE[myId])):{};d.e=d.e||{};if(isK){d.nm=d.nm||{};d.nm[u.id]={n:v,t:Date.now()}}else{d.kn=d.kn||{};d.kn[u.id]={n:v,t:Date.now()}}await db.doc("realisasi/"+myId).set(d);toast("Nama kegiatan tersimpan")}catch(e){toast("Gagal menyimpan nama kegiatan",true)}};
- if($("ipg"))$("ipg").onchange=async function(){var p=parseFloat(this.value);if(isNaN(p)||p<0){toast("Isi anggaran dengan angka 0 atau lebih",true);return}try{var d=RE[myId]?JSON.parse(JSON.stringify(RE[myId])):{};d.e=d.e||{};d.pg=d.pg||{};d.pg[u.id]={p:p,t:Date.now()};await db.doc("realisasi/"+myId).set(d);toast("Anggaran tersimpan")}catch(e){toast("Gagal menyimpan anggaran",true)}};
+ if($("ikn"))$("ikn").onchange=async function(){var v=this.value.trim().slice(0,80);if(!v)return;try{var d=RE[myId]?JSON.parse(JSON.stringify(RE[myId])):{};d.e=d.e||{};d.nm=d.nm||{};d.nm[u.id]={n:v,t:Date.now()};await db.doc("realisasi/"+myId).set(d);toast("Nama kegiatan tersimpan")}catch(e){toast("Gagal menyimpan nama",true)}};
+ if(!isK)kgInit(box,u);
  $("isv").onclick=async function(){var r=parseFloat($("ir").value),f=parseFloat($("if").value),m=$("imsg");m.className="msg e";
   if(isNaN(r)||isNaN(f)){m.textContent="Isi realisasi keuangan dan fisik.";return}
   if(r<prev&&!isAdmin){m.textContent="Realisasi kumulatif tidak boleh lebih kecil dari bulan sebelumnya (Rp "+num(prev)+" juta).";return}
@@ -546,11 +575,11 @@ function onChange(e){var t=e.target,r;
   if(t.dataset.thn){var y=parseInt(t.value);if(y>=2000&&y<=2100){CFG.tahun=y;saveCFG()}return}
   if(t.dataset.th){var a=(CFG.th||[5,15]).slice(),v=parseFloat(t.value);if(!(v>=0)){toast("Isi angka 0 atau lebih",true);return}a[+t.dataset.th]=v;if(a[1]<a[0]){toast("Batas kedua harus sama atau lebih besar dari batas pertama",true);return}CFG.th=a;saveCFG();return}
   if(t.dataset.tg){var g=T().slice(),v2=parseFloat(t.value);if(!(v2>=0&&v2<=100)){toast("Target harus antara 0 dan 100",true);return}g[+t.dataset.tg]=v2;CFG.tgt=g;saveCFG();return}
-  if(t.dataset.bpg){var bq=CFG.bidang.filter(function(x){return x.id==t.dataset.bpg})[0],vq=t.value.trim()===""?0:parseFloat(t.value);if(bq&&vq>=0){bq.p=vq;bq.pt=Date.now();saveCFG()}return}
+  if(t.dataset.bpg){var bq=CFG.bidang.filter(function(x){return x.id==t.dataset.bpg})[0],vq=t.value.trim()===""?0:parseFloat(t.value);if(bq&&vq>=0){bq.p=vq;saveCFG()}return}
   if(t.dataset.bc){var bc=CFG.bidang.filter(function(x){return x.id==t.dataset.bc})[0];if(bc&&/^#[0-9a-f]{6}$/i.test(t.value)){bc.c=t.value;saveCFG()}return}
   if(t.dataset.bn){var bb=CFG.bidang.filter(function(x){return x.id==t.dataset.bn})[0];if(bb&&t.value.trim()){bb.name=t.value.trim().slice(0,80);saveCFG()}return}}
  if(t.dataset.n){r=fu(t.dataset.n);if(r&&canB(r.b)&&t.value.trim()){r.u.name=t.value.trim().slice(0,80);r.u.nt=Date.now();persU(r)}return}
- if(t.dataset.p){r=fu(t.dataset.p);var v3=t.value.trim()===""?0:parseFloat(t.value);if(r&&canB(r.b)&&v3>=0){r.u.p=v3;r.u.pt=Date.now();persU(r)}}}
+ if(t.dataset.p){r=fu(t.dataset.p);var v3=t.value.trim()===""?0:parseFloat(t.value);if(r&&canB(r.b)&&v3>=0){r.u.p=v3;persU(r)}}}
 function arm(t,txt){if(t._a){t._a=0;clearTimeout(t._t);return true}t._a=1;t._o=t.textContent;t.textContent=txt;t._t=setTimeout(function(){t._a=0;t.textContent=t._o},4000);return false}
 async function clrMonth(id,m){try{var ks=Object.keys(RE);for(var i=0;i<ks.length;i++){var d=JSON.parse(JSON.stringify(RE[ks[i]]));if(d.e&&d.e[id+"_"+m]!==undefined){delete d.e[id+"_"+m];await db.doc("realisasi/"+ks[i]).set(d)}}toast("Input bulan ini dikosongkan")}catch(e){toast("Gagal mengosongkan: "+((e&&(e.message||e.code))||"tidak diketahui"),true)}}
 async function clr(ids){try{var ks=Object.keys(RE);for(var i=0;i<ks.length;i++){var d=JSON.parse(JSON.stringify(RE[ks[i]]));d.e=d.e||{};Object.keys(d.e).forEach(function(k){if(!ids||ids.some(function(id){return k.indexOf(id+"_")===0}))delete d.e[k]});await db.doc("realisasi/"+ks[i]).set(d)}toast("Data realisasi dikosongkan")}catch(e){toast("Gagal mengosongkan: "+((e&&(e.message||e.code))||"tidak diketahui"),true)}}
