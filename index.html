@@ -478,7 +478,8 @@ function renderKb(){var box=$("kb"),L=isAdmin?[]:CFG.bidang.filter(isKb);box.hid
 async function approve(u){var r=RQ[u];if(!r)return;
  if(r.role=="kabid"){if(!isAdmin)return;var b=CFG.bidang.filter(function(x){return x.id==r.b})[0];
   if(!b){toast("Bidang tidak ditemukan",true);return}
-  if(kb(b)){toast("Bidang ini sudah memiliki Kepala Bidang. Cabut dulu.",true);return}
+  if(kb(b)==u){try{await db.doc("permintaan/"+u).delete()}catch(e){}return}
+  if(kb(b)){toast("Bidang ini sudah memiliki Kepala Bidang ("+nm(kb(b))+"). Cabut dulu di Pengaturan.",true);return}
   if(CFG.bidang.some(function(x){return kb(x)==u})){toast("Orang ini sudah menjadi Kepala Bidang di bidang lain.",true);return}
   var em0=(r.e||"").trim();if(em0){CFG.em=CFG.em||{};CFG.em[u]=em0}await setKb(b,u);try{await db.doc("permintaan/"+u).delete()}catch(e){}return}
  var q=fu(r.b);if(!q||!canB(q.b)){toast("Bidang atau kegiatan tidak ditemukan",true);return}
@@ -490,11 +491,11 @@ function catBlock(){var a=CFG.th||[5,15],t=T();
  h+='<h2 style="font-size:15px;margin-top:10px">Target serapan kumulatif per bulan (%)</h2><div class="f">';
  for(var i=0;i<12;i++)h+='<div><label>'+BLN[i].slice(0,3)+'</label><input style="width:76px" type="number" min="0" max="100" step="0.1" data-tg="'+i+'" value="'+t[i]+'"></div>';
  return h+'</div></div>'}
-function pdWant(r){var b=CFG.bidang.filter(function(x){return x.id==r.b})[0];
- if(r.role=="kabid")return b?(kb(b)?kbt(b)+" (sudah terisi)":kbt(b)):"Kepala Bidang (bidang sudah dihapus)";
+function pdWant(r,uid){var b=CFG.bidang.filter(function(x){return x.id==r.b})[0];
+ if(r.role=="kabid")return b?(kb(b)?kbt(b)+(uid&&kb(b)==uid?" (sudah tercatat atas orang ini)":" (sudah terisi orang lain, cabut dulu)"):kbt(b)):"Kepala Bidang (bidang sudah dihapus)";
  if(r.role=="ppk")return b?"PPK "+b.name+(plist(b).length?" (pilih kegiatan di samping)":((b.ppk||[]).length?" (sudah terisi)":"")):"PPK (bidang sudah dihapus)";return""}
 function pdBlock(){var ids=Object.keys(PD).filter(function(u){return!AK[PD[u].email]});if(!ids.length)return'';
- return'<div class="sb" id="pdb"><h2 style="font-size:15px">Login menunggu akses</h2><p class="hint">Akun Google berikut sudah mencoba masuk tetapi emailnya belum terdaftar. Periksa dulu bahwa orangnya memang berhak.</p>'+ids.map(function(u){var r=PD[u],w=r.role?pdWant(r):"";
+ return'<div class="sb" id="pdb"><h2 style="font-size:15px">Login menunggu akses</h2><p class="hint">Akun Google berikut sudah mencoba masuk tetapi emailnya belum terdaftar. Periksa dulu bahwa orangnya memang berhak.</p>'+ids.map(function(u){var r=PD[u],w=r.role?pdWant(r,u):"";
   var pb=r.role=="ppk"?CFG.bidang.filter(function(x){return x.id==r.b})[0]:null,ps="";
   if(pb&&plist(pb).length){var fr=plist(pb).filter(function(q){return!(q.ppk||[]).length});ps=fr.length?'<div><label>Kegiatan</label><select data-pdp="'+esc(u)+'"><option value="">Pilih kegiatan…</option>'+fr.map(function(q){return'<option value="'+esc(q.id)+'">'+esc(q.name)+'</option>'}).join("")+'</select></div>':'<div class="sub">semua kegiatan sudah punya PPK</div>'}
   return'<div class="f"><div><b>'+esc(r.name||r.email)+'</b> <span class="sub">'+esc(r.email)+'</span><div class="sub">'+(w?'meminta menjadi '+esc(w):'belum memilih jabatan')+'</div></div>'+ps+(w?'<button class="pri" type="button" data-pdok="'+esc(u)+'">Setujui sebagai '+(r.role=="kabid"?'Kepala Bidang':'PPK')+'</button><button type="button" data-pdonly="'+esc(u)+'">Akses saja</button>':'<button class="pri" type="button" data-pdonly="'+esc(u)+'">Beri akses Pengguna</button>')+'<button type="button" data-pdadm="'+esc(u)+'">Jadikan Admin</button><button type="button" data-pdno="'+esc(u)+'">Tolak</button></div>'}).join("")+'</div>'}
