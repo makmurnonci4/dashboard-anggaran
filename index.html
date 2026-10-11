@@ -322,6 +322,13 @@ function alur(PD,SB,P,R){var seg=[{n:"Terealisasi",v:R,c:"#10b981"},{n:"Dikelola
  var lg=seg.map(function(s){return'<div class="lg"><i style="background:'+s.c+'"></i><span>'+s.n+'</span><b>'+rp(s.v)+'</b></div>'}).join("");
  var warn=(CFG.pagu>0&&SB>PD+0.0001)?'<div class="alert">Total pagu bidang (Rp '+num(SB)+' juta) melebihi pagu dinas (Rp '+num(PD)+' juta) sebesar Rp '+num(SB-PD)+' juta.</div>':'';
  return'<h2>Alokasi pagu dinas</h2><p class="hint">Dari pagu dinas dibagi ke bidang, lalu ke PPK, sampai terealisasi.</p><div class="kv"><div><span>Pagu dinas</span><b>Rp '+num(PD)+' juta</b></div><div><span>Dialokasikan ke bidang</span><b>Rp '+num(SB)+' juta</b></div><div><span>Dikelola PPK</span><b>Rp '+num(P)+' juta</b></div><div><span>Terealisasi</span><b>Rp '+num(R)+' juta</b> <span style="display:inline">· '+num(PD?R/PD*100:0,1)+'% dari pagu dinas</span></div></div>'+bar+'<div class="legend2">'+lg+'</div>'+warn+(CFG.pagu>0?'':'<div class="msg">Pagu dinas belum diisi, jadi memakai jumlah pagu bidang. Isi di Pengaturan, bagian Identitas instansi.</div>')}
+var FXD=0;
+function applyNames(){var re=/^(proyek|anggaran)\s+(baru|\d+)$/i,chC=false,kls={};
+ function fx(n){var m=re.exec(n||"");return m?"Kegiatan "+m[2].toLowerCase():n}
+ CFG.bidang.forEach(function(b){if(!kb(b)||!mgr(b))(b.proyek||[]).forEach(function(u){var n=fx(u.name);if(n!==u.name){u.name=n;chC=true}})});
+ Object.keys(KL).forEach(function(k){(KL[k].proyek||[]).forEach(function(u){var n=fx(u.name);if(n!==u.name){u.name=n;kls[k]=1}})});
+ if(!FXD){if(isAdmin){if(chC||Object.keys(kls).length){FXD=1;setTimeout(function(){if(chC)saveCFG();Object.keys(kls).forEach(saveKL)},0)}}else if(kls[myId]){FXD=1;setTimeout(function(){saveKL(myId)},0)}}
+ allUnits().forEach(function(x){var u=x.u;if(u===x.b)return;var id=(u.ppk||[])[0],d=id&&RE[id],ov=d&&d.nm&&d.nm[u.id];if(ov&&ov.n&&ov.t>(u.nt||0))u.name=ov.n})}
 function rp(v){return Math.abs(v)>=1000?"Rp "+num(v/1000,1)+" M":"Rp "+num(v)+" juta"}
 function ppkAgg(tg){var m={},un=0;
  UL.forEach(function(y){var u=(y.u.ppk||[])[0],r=ur(y,tg);
@@ -352,6 +359,7 @@ function render(){
   return}
  $("setup").hidden=true;$("main").hidden=false;
  Object.keys(CFG.em||{}).forEach(function(u){if(!EM[u])EM[u]=CFG.em[u]});Object.keys(KL).forEach(function(k){Object.keys(KL[k].em||{}).forEach(function(u){if(!EM[u])EM[u]=KL[k].em[u]})});
+ applyNames();
  var tg=T()[M-1],P=0,R=0,F=0,np=0;
  var fb=isAdmin?CFG.bidang:CFG.bidang.filter(isKb),ru=isAdmin?[]:mine().filter(function(y){return fb.indexOf(y.b)<0});
  UL=[];fb.forEach(function(b){units(b).forEach(function(u){UL.push({b:b,u:u})})});ru.forEach(function(y){UL.push(y)});UL.forEach(function(y){y.x=eff(y.u)});
@@ -434,13 +442,15 @@ function renderInput(force){
   if(RQ[myId]){reqBox(box);return}
   box.innerHTML='<h2>Jabatan belum ditetapkan</h2><p class="hint">Email Anda sudah terdaftar, tetapi belum ditetapkan sebagai Kepala Bidang atau PPK. Hubungi admin untuk menetapkan jabatan Anda.</p>';return}
  if(!IB||!L.some(function(o){return o.u.id==IB}))IB=L[0].u.id;
- var u=L.filter(function(o){return o.u.id==IB})[0].u,x=UL.filter(function(y){return y.u===u})[0].x,prev=M>1?val(x.r,M-1):0,pf=M>1?val(x.f,M-1):0,cr=x.r[M-1],cf=x.f[M-1];
+ var ob=L.filter(function(o){return o.u.id==IB})[0],u=ob.u,isK=u!==ob.b,x=UL.filter(function(y){return y.u===u})[0].x,prev=M>1?val(x.r,M-1):0,pf=M>1?val(x.f,M-1):0,cr=x.r[M-1],cf=x.f[M-1];
  box.innerHTML='<h2>Input realisasi '+BLN[M-1]+'</h2><p class="hint">Isi angka kumulatif sejak Januari sampai akhir '+BLN[M-1]+'. Bulan sebelumnya: Rp '+num(prev)+' juta, fisik '+num(pf,1)+'%.</p><div class="f">'+
  '<div><label for="ib">Bidang / kegiatan</label><select id="ib">'+L.map(function(o){return'<option value="'+esc(o.u.id)+'"'+(o.u.id==IB?" selected":"")+'>'+esc(uname(o))+'</option>'}).join("")+'</select></div>'+
+ (isK?'<div><label for="ikn">Nama kegiatan (dapat Anda ubah)</label><input id="ikn" type="text" style="min-width:230px" value="'+esc(u.name)+'"></div>':'')+
  '<div><label for="ir">Realisasi keuangan (Rp juta)</label><input id="ir" type="number" min="0" step="any" value="'+(cr==null?"":cr)+'" placeholder="mis. '+num(prev)+'"></div>'+
  '<div><label for="if">Realisasi fisik (%)</label><input id="if" type="number" min="0" max="100" step="0.1" value="'+(cf==null?"":cf)+'"></div>'+
  '<button class="pri" id="isv" type="button">Simpan realisasi</button></div><div class="msg" id="imsg"></div>';
  $("ib").onchange=function(){IB=this.value;renderInput(true)};
+ if($("ikn"))$("ikn").onchange=async function(){var v=this.value.trim().slice(0,80);if(!v)return;try{var d=RE[myId]?JSON.parse(JSON.stringify(RE[myId])):{};d.e=d.e||{};d.nm=d.nm||{};d.nm[u.id]={n:v,t:Date.now()};await db.doc("realisasi/"+myId).set(d);toast("Nama kegiatan tersimpan")}catch(e){toast("Gagal menyimpan nama",true)}};
  $("isv").onclick=async function(){var r=parseFloat($("ir").value),f=parseFloat($("if").value),m=$("imsg");m.className="msg e";
   if(isNaN(r)||isNaN(f)){m.textContent="Isi realisasi keuangan dan fisik.";return}
   if(r<prev&&!isAdmin){m.textContent="Realisasi kumulatif tidak boleh lebih kecil dari bulan sebelumnya (Rp "+num(prev)+" juta).";return}
@@ -537,7 +547,7 @@ function onChange(e){var t=e.target,r;
   if(t.dataset.bpg){var bq=CFG.bidang.filter(function(x){return x.id==t.dataset.bpg})[0],vq=t.value.trim()===""?0:parseFloat(t.value);if(bq&&vq>=0){bq.p=vq;saveCFG()}return}
   if(t.dataset.bc){var bc=CFG.bidang.filter(function(x){return x.id==t.dataset.bc})[0];if(bc&&/^#[0-9a-f]{6}$/i.test(t.value)){bc.c=t.value;saveCFG()}return}
   if(t.dataset.bn){var bb=CFG.bidang.filter(function(x){return x.id==t.dataset.bn})[0];if(bb&&t.value.trim()){bb.name=t.value.trim().slice(0,80);saveCFG()}return}}
- if(t.dataset.n){r=fu(t.dataset.n);if(r&&canB(r.b)&&t.value.trim()){r.u.name=t.value.trim().slice(0,80);persU(r)}return}
+ if(t.dataset.n){r=fu(t.dataset.n);if(r&&canB(r.b)&&t.value.trim()){r.u.name=t.value.trim().slice(0,80);r.u.nt=Date.now();persU(r)}return}
  if(t.dataset.p){r=fu(t.dataset.p);var v3=t.value.trim()===""?0:parseFloat(t.value);if(r&&canB(r.b)&&v3>=0){r.u.p=v3;persU(r)}}}
 function arm(t,txt){if(t._a){t._a=0;clearTimeout(t._t);return true}t._a=1;t._o=t.textContent;t.textContent=txt;t._t=setTimeout(function(){t._a=0;t.textContent=t._o},4000);return false}
 async function clrMonth(id,m){try{var ks=Object.keys(RE);for(var i=0;i<ks.length;i++){var d=JSON.parse(JSON.stringify(RE[ks[i]]));if(d.e&&d.e[id+"_"+m]!==undefined){delete d.e[id+"_"+m];await db.doc("realisasi/"+ks[i]).set(d)}}toast("Input bulan ini dikosongkan")}catch(e){toast("Gagal mengosongkan: "+((e&&(e.message||e.code))||"tidak diketahui"),true)}}
