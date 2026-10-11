@@ -107,6 +107,14 @@ td.l,th.l{text-align:left}
 .kv b{font-size:17px;font-weight:800}
 .pbar{height:8px;background:var(--bg);border-radius:99px;overflow:hidden;margin:0 0 12px}
 .pbar i{display:block;height:100%;border-radius:99px}
+.who{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;margin:2px 0 0;font-size:14px}
+.rb .pg td{background:color-mix(in srgb,var(--bc,#888) 8%,transparent);font-weight:600}
+.rb .kg td{color:var(--mut);font-size:13.5px}
+table.xl{min-width:560px}
+.xl .pg td{background:var(--bg);font-weight:600}
+.xl .kg td{font-size:13.5px}
+.xl td input[type=text]{width:100%;min-width:200px;text-align:left}
+.xl td input[type=number]{width:130px}
 @media (max-width:860px){.grid{grid-template-columns:1fr}.band{grid-template-columns:1fr 1fr}h1{font-size:22px}header{padding:20px 18px}}
 @media (max-width:480px){.band{grid-template-columns:1fr}}
 @media print{.ctl,.tabs{display:none}body{background:#fff}header{background:#fff;color:#000;box-shadow:none}.panel,.rb{break-inside:avoid;box-shadow:none}}
@@ -132,7 +140,7 @@ td.l,th.l{text-align:left}
 <div id="setup" class="panel" hidden></div>
 <div id="main" hidden>
 <section class="band" aria-label="Ringkasan">
-  <div class="kpi"><div class="l">Total pagu</div><div class="v" id="k1"></div><div class="n" id="k1n"></div></div>
+  <div class="kpi"><div class="l">Anggaran dikelola PPK</div><div class="v" id="k1"></div><div class="n" id="k1n"></div></div>
   <div class="kpi"><div class="l">Realisasi keuangan</div><div class="v" id="k2"></div><div class="n" id="k2n"></div></div>
   <div class="kpi"><div class="l">Realisasi fisik (rata-rata berbobot)</div><div class="v" id="k3"></div><div class="n" id="k3n"></div></div>
   <div class="kpi"><div class="l">Selisih dari target bulan ini</div><div class="v" id="k4"></div><div class="n" id="k4n"></div></div>
@@ -164,7 +172,7 @@ td.l,th.l{text-align:left}
   <h2>Daya serap per PPK</h2>
   <p class="hint">Setiap PPK dinilai dari persentase daya serapnya dan selisihnya terhadap target bulan ini, bukan dari besar pagu. Diurutkan dari daya serap tertinggi.</p>
   <div class="scroll"><table>
-    <thead><tr><th class="l">No</th><th class="l">PPK</th><th class="l">Bidang / proyek</th><th>Daya serap keuangan</th><th>Fisik</th><th>Selisih target</th><th class="l">Status PPK</th><th class="l">Status pagu</th><th class="l">Diperbarui</th></tr></thead>
+    <thead><tr><th class="l">No</th><th class="l">PPK</th><th class="l">Bidang / kegiatan</th><th>Daya serap keuangan</th><th>Fisik</th><th>Selisih target</th><th class="l">Status PPK</th><th class="l">Status pagu</th><th class="l">Diperbarui</th></tr></thead>
     <tbody id="pr"></tbody>
   </table></div>
 </section>
@@ -256,7 +264,7 @@ function eff(b){var r=Array(12).fill(null),f=Array(12).fill(null),mt=Array(12).f
   for(var m=1;m<=12;m++){var x=e[b.id+"_"+m];if(x&&(!mt[m-1]||x.t>mt[m-1].t)){mt[m-1]={t:x.t,u:u};r[m-1]=x.r;f[m-1]=x.f}}});
  return{r:r,f:f,mt:mt}}
 function toast(t,bad){var d=$("toast");if(!d){d=document.createElement("div");d.id="toast";d.setAttribute("role","status");d.style.cssText="position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));max-width:90%;padding:10px 16px;border-radius:10px;font-size:14px;z-index:9;box-shadow:0 4px 16px rgba(0,0,0,.25)";document.body.appendChild(d)}d.style.background=bad?"#b3261e":"var(--ink)";d.style.color=bad?"#fff":"var(--bg)";d.textContent=t;d.hidden=false;clearTimeout(d._t);d._t=setTimeout(function(){d.hidden=true},bad?8000:2200)}
-async function saveCFG(){if(document.activeElement&&document.activeElement.tagName=="BUTTON")document.activeElement.blur();render();try{await db.doc("config/main").set(JSON.parse(JSON.stringify(CFG)));toast("Perubahan tersimpan")}catch(e){toast("Gagal menyimpan: "+((e&&(e.message||e.code))||"tidak diketahui")+". Muat ulang halaman lalu coba lagi.",true)}}
+async function saveCFG(){if(document.activeElement&&document.activeElement.tagName=="BUTTON"){document.activeElement.blur();["set","kb"].forEach(function(i){$(i)._f=0})}render();try{await db.doc("config/main").set(JSON.parse(JSON.stringify(CFG)));toast("Perubahan tersimpan")}catch(e){toast("Gagal menyimpan: "+((e&&(e.message||e.code))||"tidak diketahui")+". Muat ulang halaman lalu coba lagi.",true)}}
 function kb(b){return(b.kabid||[]).slice(0,1)[0]||null}
 function isKb(b){var k=kb(b);return!!k&&k===myId}
 function mgr(b){var k=kb(b);return k&&KL[k]&&KL[k].bid===b.id?KL[k]:null}
@@ -264,13 +272,14 @@ function plist(b){var m=mgr(b);return(m?m.proyek:b.proyek)||[]}
 function units(b){var l=plist(b);return l.length?l:[b]}
 function allUnits(){var o=[];CFG.bidang.forEach(function(b){units(b).forEach(function(u){o.push({b:b,u:u})})});return o}
 function fu(id){var r=null;CFG.bidang.forEach(function(b){var l=plist(b);if(l.length){l.forEach(function(p){if(p.id==id)r={u:p,b:b}})}else if(b.id==id)r={u:b,b:b}});return r}
+function bpagu(b){return(b.p>0)?b.p:bp(b)}
 function bp(b){return units(b).reduce(function(a,u){return a+(u.p||0)},0)}
 function uname(x){return x.u===x.b?x.b.name:x.b.name+" › "+x.u.name}
 function mine(){return allUnits().filter(function(x){return isAdmin||(x.u.ppk||[]).slice(0,1).indexOf(myId)>=0})}
 function canB(b){return isAdmin||isKb(b)}
 function hold(b){var k=kb(b);if(k){if(!(KL[k]&&KL[k].bid===b.id))KL[k]={bid:b.id,proyek:[],tolak:{}};return KL[k]}return b}
 function rejected(b,u,t){var m=mgr(b);return!!(m&&m.tolak&&m.tolak[u]&&m.tolak[u]>=(t||0))}
-function saveKL(uid){var d=KL[uid];if(!d)return Promise.resolve();if(document.activeElement&&document.activeElement.tagName=="BUTTON")document.activeElement.blur();render();return db.doc("kelola/"+uid).set(JSON.parse(JSON.stringify(d))).then(function(){toast("Perubahan tersimpan")},function(e){toast("Gagal menyimpan: "+((e&&(e.message||e.code))||"tidak diketahui"),true)})}
+function saveKL(uid){var d=KL[uid];if(!d)return Promise.resolve();if(document.activeElement&&document.activeElement.tagName=="BUTTON"){document.activeElement.blur();["set","kb"].forEach(function(i){$(i)._f=0})}render();return db.doc("kelola/"+uid).set(JSON.parse(JSON.stringify(d))).then(function(){toast("Perubahan tersimpan")},function(e){toast("Gagal menyimpan: "+((e&&(e.message||e.code))||"tidak diketahui"),true)})}
 function persU(r){return(r.u!==r.b&&mgr(r.b))?saveKL(kb(r.b)):saveCFG()}
 async function setKb(b,u){var d={bid:b.id,proyek:JSON.parse(JSON.stringify(b.proyek||[])),tolak:{}};delete b.proyek;b.kabid=[u];KL[u]=d;try{await db.doc("kelola/"+u).set(d)}catch(e){toast("Gagal menyimpan data Kepala Bidang",true)}await saveCFG()}
 async function unKb(b){var u=kb(b);if(!u)return;var m=mgr(b);b.proyek=JSON.parse(JSON.stringify(m?(m.proyek||[]):(b.proyek||[])));if(!b.proyek.length)delete b.proyek;b.kabid=[];delete KL[u];try{await db.doc("kelola/"+u).delete()}catch(e){}await saveCFG()}
@@ -287,12 +296,19 @@ function pubOpsi(){if(!db||!CFG||!(CFG.bidang||[]).length)return;if(!(isAdmin||C
  var o={bidang:CFG.bidang.map(function(b){return{id:b.id,name:b.name,kl:kbl(b),kt:!!kb(b),units:units(b).map(function(u){return{id:u.id,name:u.name,pt:!!(u.ppk||[]).length}})}})},z=JSON.stringify(o);
  if(z===LOP)return;LOP=z;o.t=Date.now();db.doc("opsi/main").set(o).catch(function(){})}
 function rincian(rows){if(!rows.length)return'<div class="empty">Belum ada bidang.</div>';
- return rows.map(function(r){var us=(r.us&&r.us.length)?r.us:[r],flat=!(r.us&&r.us.length),c=bcol(r.b);
-  var body=us.map(function(u){var own=u.u||r.b;return'<tr><td class="l">'+((u.u&&u.u!==r.b&&!flat)?'<span class="sub">'+esc(u.n)+'</span><br>':'')+'<b>'+ppkh(own)+'</b></td><td>'+num(u.p)+'</td><td>'+num(u.real)+'</td><td>'+num(u.pct,1)+'%</td><td>'+num(u.fis,1)+'%</td><td class="l">'+kp(u)+'</td></tr>'}).join("");
-  return'<div class="rb" style="--bc:'+c+'"><div class="rh"><span class="rt">'+dot(r.b)+esc(r.n)+'</span><span class="pill '+r.s+'">'+SL[r.s]+'</span></div>'+
-   '<div class="kv"><div><span>Pagu</span><b>Rp '+num(r.p)+' juta</b></div><div><span>Terealisasi</span><b>Rp '+num(r.real)+' juta</b> <span style="display:inline">· '+num(r.pct,1)+'%</span></div><div><span>Fisik</span><b>'+num(r.fis,1)+'%</b></div></div>'+
+ return rows.map(function(r){var b=r.b,c=bcol(b),us=r.us||[],k0=kb(b);
+  var who=r.own?'':'<div class="who"><span class="sub">'+kbl(b)+'</span>'+(k0?'<b>'+esc(nm(k0))+'</b>'+(EM[k0]?' <span class="sub">'+esc(EM[k0])+'</span>':''):'<span class="sub">belum ada</span>')+'</div>';
+  var gs=[],gm={};us.forEach(function(u){var id=(u.u.ppk||[])[0]||"",g=gm[id];if(!g){g=gm[id]={id:id,us:[],p:0,real:0,fw:0,nd:true};gs.push(g)}g.us.push(u);g.p+=u.p;g.real+=u.real;g.fw+=u.fis*u.p;if(!u.nd)g.nd=false});
+  gs.sort(function(a,c2){return(a.id==="")-(c2.id==="")});
+  var body="";
+  gs.forEach(function(g){var pct=g.p>0?g.real/g.p*100:0,fis=g.p?g.fw/g.p:0,k=g.nd?"none":(pct>=99.995&&fis>=99.995)?"done":pct>=99.995?"keu":fis>=99.995?"fisik":"blm";
+   body+='<tr class="pg"><td class="l"><b>'+(g.id?esc(nm(g.id)):'<span class="sub">Belum ada PPK</span>')+'</b></td><td class="l">'+(g.id&&EM[g.id]?esc(EM[g.id]):'')+'</td><td>'+num(g.p)+'</td><td>'+num(g.real)+'</td><td>'+num(pct,1)+'%</td><td>'+num(fis,1)+'%</td><td class="l">'+kp({k:k,p:g.p,real:g.real})+'</td></tr>';
+   if(g.us.some(function(u){return u.u!==b}))g.us.forEach(function(u){body+='<tr class="kg"><td class="l" style="padding-left:26px">↳ '+esc(u.u===b?"Seluruh bidang":u.n)+'</td><td></td><td>'+num(u.p)+'</td><td>'+num(u.real)+'</td><td>'+num(u.pct,1)+'%</td><td>'+num(u.fis,1)+'%</td><td class="l">'+kp(u)+'</td></tr>'})});
+  var bel=r.p-r.al;
+  return'<div class="rb" style="--bc:'+c+'"><div class="rh"><span class="rt">'+dot(b)+esc(r.n)+'</span><span class="pill '+r.s+'">'+SL[r.s]+'</span></div>'+who+
+   '<div class="kv">'+(r.own?'<div><span>Anggaran Anda</span><b>Rp '+num(r.p)+' juta</b></div>':'<div><span>Pagu bidang</span><b>Rp '+num(r.p)+' juta</b></div><div><span>Dikelola PPK</span><b>Rp '+num(r.al)+' juta</b>'+(bel>0.0001?' <span style="display:inline">· sisa '+num(bel)+'</span>':'')+'</div>')+'<div><span>Terealisasi</span><b>Rp '+num(r.real)+' juta</b> <span style="display:inline">· '+num(r.pct,1)+'%</span></div><div><span>Fisik</span><b>'+num(r.fis,1)+'%</b></div></div>'+
    '<div class="pbar"><i style="width:'+Math.min(100,r.pct)+'%;background:'+c+'"></i></div>'+
-   '<div class="scroll"><table style="min-width:540px"><thead><tr><th class="l">PPK</th><th>Anggaran (Rp juta)</th><th>Keuangan (Rp juta)</th><th>Keuangan</th><th>Fisik</th><th class="l">Keterangan PPK</th></tr></thead><tbody>'+body+'</tbody></table></div></div>'}).join("")}
+   '<div class="scroll"><table style="min-width:620px"><thead><tr><th class="l">PPK / kegiatan</th><th class="l">Email</th><th>Anggaran dikelola (Rp juta)</th><th>Keuangan (Rp juta)</th><th>Keuangan</th><th>Fisik</th><th class="l">Keterangan PPK</th></tr></thead><tbody>'+body+'</tbody></table></div></div>'}).join("")}
 function rp(v){return Math.abs(v)>=1000?"Rp "+num(v/1000,1)+" M":"Rp "+num(v)+" juta"}
 function ppkAgg(tg){var m={},un=0;
  UL.forEach(function(y){var u=(y.u.ppk||[])[0],r=ur(y,tg);
@@ -318,7 +334,7 @@ function render(){
  if(!CFG){$("main").hidden=true;$("setup").hidden=false;
   $("role").innerHTML=who();
   $("org").textContent="Belum diatur";$("thn").textContent=new Date().getFullYear();$("bln").textContent=BLN[M-1];
-  $("setup").innerHTML=isAdmin?'<h2>Mulai menyiapkan dashboard</h2><p class="hint">Isi identitas instansi. Bidang, proyek, dan PPK ditambahkan setelahnya di Pengaturan.</p><div class="f"><div><label for="so">Nama dinas / instansi</label><input type="text" id="so" style="min-width:300px" placeholder="mis. Dinas Kesehatan"></div><div><label for="st">Tahun anggaran</label><input type="number" id="st" style="width:100px" value="'+new Date().getFullYear()+'"></div><button class="pri" id="s2" type="button">Mulai dengan tampilan kosong</button></div>':'<div class="empty">Dashboard belum disiapkan oleh Kepala Dinas.</div>';
+  $("setup").innerHTML=isAdmin?'<h2>Mulai menyiapkan dashboard</h2><p class="hint">Isi identitas instansi. Bidang, kegiatan, dan PPK ditambahkan setelahnya di Pengaturan.</p><div class="f"><div><label for="so">Nama dinas / instansi</label><input type="text" id="so" style="min-width:300px" placeholder="mis. Dinas Kesehatan"></div><div><label for="st">Tahun anggaran</label><input type="number" id="st" style="width:100px" value="'+new Date().getFullYear()+'"></div><button class="pri" id="s2" type="button">Mulai dengan tampilan kosong</button></div>':'<div class="empty">Dashboard belum disiapkan oleh Kepala Dinas.</div>';
   if(isAdmin){$("s2").onclick=function(){init($("so").value.trim(),parseInt($("st").value))}}
   return}
  $("setup").hidden=true;$("main").hidden=false;
@@ -328,16 +344,20 @@ function render(){
  UL=[];fb.forEach(function(b){units(b).forEach(function(u){UL.push({b:b,u:u})})});ru.forEach(function(y){UL.push(y)});UL.forEach(function(y){y.x=eff(y.u)});
  var rows=fb.map(function(b){var us=UL.filter(function(y){return y.b===b}).map(function(y){return ur(y,tg)}),p=0,real=0,fw=0,nd=true,lm=null;
   us.forEach(function(r){p+=r.p;real+=r.real;fw+=r.fis*r.p;if(!r.nd)nd=false;if(r.lm&&(!lm||r.lm.t>lm.t))lm=r.lm});
-  var fis=p?fw/p:0,pct=p>0?real/p*100:0,gap=pct-tg,hp=plist(b).length>0;if(hp)np+=plist(b).length;
-  return{b:b,n:b.name,p:p,real:real,fis:fis,pct:pct,gap:gap,s:nd?"none":st(gap),k:hp?(nd?"none":(us.every(function(u){return u.k=="done"})?"done":"blm")):(us[0]?us[0].k:"none"),kt:hp?us.filter(function(u){return u.k=="done"}).length+" dari "+us.length+" proyek teralisasi":null,need:Math.max(0,tg/100*p-real),sisa:p-real,lm:lm,hp:hp,us:us}});
- ru.forEach(function(y){var r=ur(y,tg);r.n=uname(y);r.b=y.b;r.hp=false;r.us=[];rows.push(r)});
+  var al=p;p=bpagu(b);var fis=al?fw/al:0,pct=p>0?real/p*100:0,gap=pct-tg,hp=plist(b).length>0;if(hp)np+=plist(b).length;
+  return{b:b,n:b.name,p:p,al:al,real:real,fis:fis,pct:pct,gap:gap,s:nd?"none":st(gap),k:hp?(nd?"none":(us.every(function(u){return u.k=="done"})?"done":"blm")):(us[0]?us[0].k:"none"),kt:hp?us.filter(function(u){return u.k=="done"}).length+" dari "+us.length+" kegiatan teralisasi":null,need:Math.max(0,tg/100*p-real),sisa:p-real,lm:lm,hp:hp,us:us}});
+ var gb=[];ru.forEach(function(y){if(gb.indexOf(y.b)<0)gb.push(y.b)});
+ gb.forEach(function(b){var us=ru.filter(function(y){return y.b===b}).map(function(y){return ur(y,tg)}),p=0,real=0,fw=0,nd=true,lm=null;
+  us.forEach(function(r){p+=r.p;real+=r.real;fw+=r.fis*r.p;if(!r.nd)nd=false;if(r.lm&&(!lm||r.lm.t>lm.t))lm=r.lm});
+  var fis=p?fw/p:0,pct=p>0?real/p*100:0,gap=pct-tg;
+  rows.push({b:b,n:b.name,p:p,al:p,real:real,fis:fis,pct:pct,gap:gap,s:nd?"none":st(gap),k:nd?"none":(pct>=99.995&&fis>=99.995)?"done":pct>=99.995?"keu":fis>=99.995?"fisik":"blm",kt:null,need:Math.max(0,tg/100*p-real),sisa:p-real,lm:lm,hp:true,us:us,own:true})});
  var AG=ppkAgg(tg);AG.list.forEach(function(a){P+=a.p;R+=a.real;F+=a.fw});F=P?F/P:0;var pct=P?R/P*100:0,gap=pct-tg;
  var mi=mine().map(uname),kbn=CFG.bidang.filter(isKb).map(kbt);
  $("role").innerHTML=who()+" · "+(isAdmin?"Pimpinan/admin"+(Object.keys(RQ).length?" · <b>"+Object.keys(RQ).length+" permintaan PPK menunggu persetujuan</b>":""):((kbn.length?esc(kbn.join(", ")):"")+(kbn.length&&mi.length?" · ":"")+(mi.length?"PPK "+esc(mi.join(", ")):"")||"Belum terdaftar"));
  var priv=!isAdmin&&!mi.length&&!kbn.length;document.querySelectorAll("#main .band,#main .grid,#tabs,#rincian,#rekap,#ppkrank").forEach(function(el){el.hidden=priv});
- $("chart").parentNode.querySelector(".hint").textContent=isAdmin?"Seluruh bidang, dibandingkan dengan target tiap bulan.":"Bidang dan proyek Anda, dibandingkan dengan target tiap bulan.";
+ $("chart").parentNode.querySelector(".hint").textContent=isAdmin?"Seluruh bidang, dibandingkan dengan target tiap bulan.":"Bidang dan kegiatan Anda, dibandingkan dengan target tiap bulan.";
  $("bln").textContent=BLN[M-1]+" "+(CFG.tahun||2026);$("org").textContent=CFG.org||"Dinas Pendidikan, Pemuda dan Olahraga";$("thn").textContent=CFG.tahun||2026;document.title="Dashboard Serapan Anggaran – "+$("org").textContent;var a_=CFG.th||[5,15];document.querySelector(".foot").textContent="Status: Sesuai target bila selisih paling banyak "+a_[0]+" poin di bawah target, Perlu dipercepat bila "+a_[0]+" sampai "+a_[1]+" poin di bawah target, Terlambat bila lebih dari "+a_[1]+" poin di bawah target. Batas dapat diubah admin di bagian Pengaturan.";
- $("k1").textContent=rp(P);$("k1n").textContent=isAdmin?rows.length+" bidang · "+AG.list.length+" PPK"+(AG.un>0?" · "+rp(AG.un)+" belum ada PPK":""):rows.length+" bidang/proyek Anda";
+ $("k1").textContent=rp(P);$("k1n").textContent=isAdmin?AG.list.length+" PPK · pagu bidang "+rp(rows.reduce(function(a,r){return a+r.p},0))+(AG.un>0?" · "+rp(AG.un)+" belum ada PPK":""):rows.length+" bidang/kegiatan Anda";
  $("k2").textContent=num(pct,1)+"%";$("k2n").textContent=rp(R)+" · target "+tg+"%";
  $("k3").textContent=num(F,1)+"%";$("k3n").textContent=F<pct?"Fisik tertinggal dari keuangan":"Fisik sejalan dengan keuangan";
  $("k4").textContent=(gap>=0?"+":"")+num(gap,1)+" poin";$("k4n").textContent=(rows.every(function(r){return r.s=="none"})?SL.none:SL[st(gap)])+" · sisa "+rp(P-R);
@@ -345,7 +365,7 @@ function render(){
   h+='<div class="row" style="border-left:5px solid '+bcol(r.b)+';padding-left:12px"><div class="rh"><span class="rn">'+dot(r.b)+esc(r.n)+'</span><span class="pill '+r.s+'">'+SL[r.s]+'</span></div><div class="track"><div class="fill '+r.s+'" style="width:'+Math.min(100,r.pct)+'%"></div><div class="tick" style="left:calc('+tg+'% - 1px)"></div></div><div class="ftrack"><div class="ffill" style="width:'+Math.min(100,r.fis)+'%;background:'+bcol(r.b)+';opacity:.8"></div></div><div class="meta"><span><b>'+num(r.pct,1)+'%</b> keuangan · '+num(r.fis,1)+'% fisik</span><span>Rp '+num(r.real)+' dari Rp '+num(r.p)+' juta</span></div>'+
   (r.hp?r.us.map(function(u){return'<div class="meta"><span>↳ '+esc(u.n)+'</span><span>'+num(u.pct,1)+'% · '+SL[u.s]+(u.k=="done"||u.k=="fisik"||u.k=="keu"?' · '+KP[u.k]:'')+'</span></div>'}).join(""):"")+'</div>'});
  $("bars").innerHTML=h||'<div class="empty">Belum ada bidang.</div>';
- var tb="";rows.forEach(function(r){tb+=trow(r,false,r.hp?r.us.length+" proyek":ppkh(r.u||r.b));if(r.hp)r.us.forEach(function(u){tb+=trow(u,true,ppkh(u.u))})});
+ var tb="";rows.forEach(function(r){tb+=trow(r,false,r.hp?r.us.length+" kegiatan":ppkh(r.u||r.b));if(r.hp)r.us.forEach(function(u){tb+=trow(u,true,ppkh(u.u))})});
  $("tb").innerHTML=tb;
  $("tf").innerHTML='<tr><td class="l">Total seluruh PPK</td><td></td><td>'+num(P)+'</td><td>'+num(R)+'</td><td>'+num(pct,1)+'%</td><td>'+num(F,1)+'%</td><td>'+num(P-R)+'</td><td></td><td></td><td></td></tr>';
  $("pr").innerHTML=ppkRank(AG,tg);$("rcn").innerHTML=rincian(rows);
@@ -368,7 +388,7 @@ function opts(role){return role=="kabid"?CFG.bidang.map(function(b){return'<opti
 function reqBox(box){var r=RQ[myId],h='<h2>Pendaftaran</h2>';
  if(r){var isk=r.role=="kabid",q=isk?{b:CFG.bidang.filter(function(x){return x.id==r.b})[0]}:fu(r.b),lab=isk?(q.b?kbt(q.b):"(sudah dihapus)"):(q?"PPK "+uname(q):"(sudah dihapus)"),rej=!isk&&q&&rejected(q.b,myId,r.t);
   h+=rej?'<p class="hint">Permintaan Anda sebagai <b>'+esc(lab)+'</b> ditolak Kepala Bidang. Hapus permintaan ini bila ingin mengajukan ulang.</p><div class="f"><button type="button" id="rqc">Hapus permintaan</button></div>':'<p class="hint">Permintaan Anda sebagai <b>'+esc(lab)+'</b> menunggu persetujuan '+(isk?"admin":"Kepala Bidang atau admin")+'.</p><div class="f"><button type="button" id="rqc">Batalkan permintaan</button></div>'}
- else{h+='<p class="hint">Nama Anda (<b>'+esc(myName)+'</b>) diambil otomatis dari akun. Isi email agar admin mudah mengenali Anda.</p><p class="hint">Akun Anda belum terdaftar. Pilih peran dan tujuan Anda, lalu ajukan. Permintaan Kepala Bidang disetujui admin, permintaan PPK disetujui Kepala Bidang atau admin.</p><div class="f"><div><label for="rqr">Daftar sebagai</label><select id="rqr"><option value="ppk">PPK</option><option value="kabid">Kepala Bidang / Sekretaris</option></select></div><div><label for="rqb">Bidang / proyek</label><select id="rqb">'+opts("ppk")+'</select></div><div><label for="rqe">Email Anda</label><input type="email" id="rqe"'+(myEmail?' readonly':'')+' value="'+esc(myEmail)+'" placeholder="nama@instansi.go.id"></div><button class="pri" type="button" id="rqs">Ajukan</button></div>'}
+ else{h+='<p class="hint">Nama Anda (<b>'+esc(myName)+'</b>) diambil otomatis dari akun. Isi email agar admin mudah mengenali Anda.</p><p class="hint">Akun Anda belum terdaftar. Pilih peran dan tujuan Anda, lalu ajukan. Permintaan Kepala Bidang disetujui admin, permintaan PPK disetujui Kepala Bidang atau admin.</p><div class="f"><div><label for="rqr">Daftar sebagai</label><select id="rqr"><option value="ppk">PPK</option><option value="kabid">Kepala Bidang / Sekretaris</option></select></div><div><label for="rqb">Bidang / kegiatan</label><select id="rqb">'+opts("ppk")+'</select></div><div><label for="rqe">Email Anda</label><input type="email" id="rqe"'+(myEmail?' readonly':'')+' value="'+esc(myEmail)+'" placeholder="nama@instansi.go.id"></div><button class="pri" type="button" id="rqs">Ajukan</button></div>'}
  h+='<div class="msg" id="rqm"></div>';box.innerHTML=h;
  var s=$("rqs"),c=$("rqc");
  if($("rqr"))$("rqr").onchange=function(){$("rqb").innerHTML=opts(this.value)};
@@ -380,12 +400,12 @@ function cleanReq(){var r=RQ[myId];if(!r||cleanReq._d)return;var ok=false;
 function renderInput(force){
  var box=$("inp");if(!force&&box.contains(document.activeElement)&&document.activeElement!==box)return;
  if(isAdmin){var A=allUnits();
-  if(!A.length){box.innerHTML='<h2>Input realisasi</h2><p class="hint">Belum ada bidang atau proyek.</p>';return}
+  if(!A.length){box.innerHTML='<h2>Input realisasi</h2><p class="hint">Belum ada bidang atau kegiatan.</p>';return}
   if(!IB||!A.some(function(o){return o.u.id==IB}))IB=A[0].u.id;
   var au=A.filter(function(o){return o.u.id==IB})[0],ux=UL.filter(function(y){return y.u===au.u})[0],ax=ux&&ux.x;if(!ax){box.innerHTML='';return}
   var acr=ax.r[M-1],acf=ax.f[M-1],alm=ax.mt[M-1],ppn=(au.u.ppk||[]).length?esc(nm(au.u.ppk[0])):"belum ada PPK";
   box.innerHTML='<h2>Input realisasi '+BLN[M-1]+' (hanya lihat)</h2><p class="hint">Realisasi diinput oleh PPK. Admin hanya dapat melihat dan tidak dapat mengubah angkanya. Jika angka dianggap salah, kosongkan agar PPK menginput ulang.</p><div class="f">'+
-   '<div><label for="ib">Bidang / proyek</label><select id="ib">'+A.map(function(o){return'<option value="'+esc(o.u.id)+'"'+(o.u.id==IB?" selected":"")+'>'+esc(uname(o))+'</option>'}).join("")+'</select></div>'+
+   '<div><label for="ib">Bidang / kegiatan</label><select id="ib">'+A.map(function(o){return'<option value="'+esc(o.u.id)+'"'+(o.u.id==IB?" selected":"")+'>'+esc(uname(o))+'</option>'}).join("")+'</select></div>'+
    '<div><label>Realisasi keuangan (Rp juta)</label><input type="number" disabled value="'+(acr==null?"":acr)+'" placeholder="belum diinput"></div>'+
    '<div><label>Realisasi fisik (%)</label><input type="number" disabled value="'+(acf==null?"":acf)+'" placeholder="belum diinput"></div>'+
    '<button type="button" id="icl"'+(acr==null&&acf==null?' disabled':'')+'>Kosongkan input '+BLN[M-1]+'</button></div>'+
@@ -402,7 +422,7 @@ function renderInput(force){
  if(!IB||!L.some(function(o){return o.u.id==IB}))IB=L[0].u.id;
  var u=L.filter(function(o){return o.u.id==IB})[0].u,x=UL.filter(function(y){return y.u===u})[0].x,prev=M>1?val(x.r,M-1):0,pf=M>1?val(x.f,M-1):0,cr=x.r[M-1],cf=x.f[M-1];
  box.innerHTML='<h2>Input realisasi '+BLN[M-1]+'</h2><p class="hint">Isi angka kumulatif sejak Januari sampai akhir '+BLN[M-1]+'. Bulan sebelumnya: Rp '+num(prev)+' juta, fisik '+num(pf,1)+'%.</p><div class="f">'+
- '<div><label for="ib">Bidang / proyek</label><select id="ib">'+L.map(function(o){return'<option value="'+esc(o.u.id)+'"'+(o.u.id==IB?" selected":"")+'>'+esc(uname(o))+'</option>'}).join("")+'</select></div>'+
+ '<div><label for="ib">Bidang / kegiatan</label><select id="ib">'+L.map(function(o){return'<option value="'+esc(o.u.id)+'"'+(o.u.id==IB?" selected":"")+'>'+esc(uname(o))+'</option>'}).join("")+'</select></div>'+
  '<div><label for="ir">Realisasi keuangan (Rp juta)</label><input id="ir" type="number" min="0" step="any" value="'+(cr==null?"":cr)+'" placeholder="mis. '+num(prev)+'"></div>'+
  '<div><label for="if">Realisasi fisik (%)</label><input id="if" type="number" min="0" max="100" step="0.1" value="'+(cf==null?"":cf)+'"></div>'+
  '<button class="pri" id="isv" type="button">Simpan realisasi</button></div><div class="msg" id="imsg"></div>';
@@ -427,11 +447,9 @@ function rqKb(b){var ids=Object.keys(RQ).filter(function(u){var r=RQ[u];if(r.rol
  if(!ids.length)return'<p class="hint">Tidak ada permintaan PPK yang menunggu.</p>';
  return ids.map(function(u){var q=fu(RQ[u].b);return'<div class="f"><div><b>'+esc(nm(u))+'</b>'+(EM[u]||RQ[u].e?' <span class="sub">'+esc(EM[u]||RQ[u].e)+'</span>':'')+'<div class="sub">meminta menjadi PPK '+esc(uname(q))+'</div></div><button class="pri" type="button" data-ok="'+esc(u)+'">Setujui</button><button type="button" data-kno="'+esc(u)+'">Tolak</button></div>'}).join("")}
 function renderKb(){var box=$("kb"),L=isAdmin?[]:CFG.bidang.filter(isKb);box.hidden=!L.length;if(!L.length)return;
- if(box.contains(document.activeElement)&&document.activeElement!==box)return;
- var h='<h2>Kelola proyek dan PPK bidang Anda</h2><p class="hint">Tambahkan proyek, atur pagunya, serta setujui atau daftarkan PPK tiap proyek. Setiap PPK hanya melihat proyeknya sendiri.</p>';
- L.forEach(function(b){var l=plist(b);h+='<div class="sb"><h2 style="font-size:15px">'+esc(b.name)+'</h2><h2 style="font-size:14px;margin-top:6px">Permintaan PPK</h2>'+rqKb(b);
-  if(l.length)l.forEach(function(p){h+='<div style="margin:6px 0 10px 18px;padding-left:14px;border-left:3px solid var(--line)">'+uf(p,true,true)+'</div>'});else h+='<p class="hint">Belum ada proyek. Tambahkan proyek untuk mulai mengatur PPK.</p>';
-  h+='<div class="f"><button type="button" data-addp="'+esc(b.id)+'">Tambah proyek</button></div></div>'});
+ if((box.contains(document.activeElement)&&document.activeElement!==box)||Date.now()-(box._f||0)<400){box._d=1;return}
+ var h='<h2>Kelola kegiatan dan PPK bidang Anda</h2><p class="hint">Tambahkan PPK dan kegiatan yang dikelolanya, atur anggaran tiap kegiatan, serta setujui permintaan PPK. Satu PPK boleh mengelola beberapa kegiatan. Setiap PPK hanya melihat kegiatannya sendiri.</p>';
+ L.forEach(function(b){h+='<div class="sb"><h2 style="font-size:15px">'+esc(b.name)+'</h2><div class="sub">Pagu bidang Rp '+num(b.p||0)+' juta</div><h2 style="font-size:14px;margin-top:12px">Permintaan PPK</h2>'+rqKb(b)+ppkTable(b,false)+'</div>'});
  box.innerHTML=h}
 async function approve(u){var r=RQ[u];if(!r)return;
  if(r.role=="kabid"){if(!isAdmin)return;var b=CFG.bidang.filter(function(x){return x.id==r.b})[0];
@@ -439,7 +457,7 @@ async function approve(u){var r=RQ[u];if(!r)return;
   if(kb(b)){toast("Bidang ini sudah memiliki Kepala Bidang. Cabut dulu.",true);return}
   if(CFG.bidang.some(function(x){return kb(x)==u})){toast("Orang ini sudah menjadi Kepala Bidang di bidang lain.",true);return}
   var em0=(r.e||"").trim();if(em0){CFG.em=CFG.em||{};CFG.em[u]=em0}await setKb(b,u);try{await db.doc("permintaan/"+u).delete()}catch(e){}return}
- var q=fu(r.b);if(!q||!canB(q.b)){toast("Bidang atau proyek tidak ditemukan",true);return}
+ var q=fu(r.b);if(!q||!canB(q.b)){toast("Bidang atau kegiatan tidak ditemukan",true);return}
  if((q.u.ppk||[]).length){toast("Sudah memiliki PPK. Cabut dulu PPK tersebut.",true);return}
  var em1=(r.e||"").trim();if(em1){if(isAdmin){CFG.em=CFG.em||{};CFG.em[u]=em1}else{var hh=hold(q.b);hh.em=hh.em||{};hh.em[u]=em1}}
  q.u.ppk=[u];await persU(q);if(isAdmin&&em1)await saveCFG();try{await db.doc("permintaan/"+u).delete()}catch(e){}}
@@ -450,11 +468,11 @@ function catBlock(){var a=CFG.th||[5,15],t=T();
  return h+'</div></div>'}
 function pdWant(r){var b=CFG.bidang.filter(function(x){return x.id==r.b})[0];
  if(r.role=="kabid")return b?(kb(b)?kbt(b)+" (sudah terisi)":kbt(b)):"Kepala Bidang (bidang sudah dihapus)";
- if(r.role=="ppk")return b?"PPK "+b.name+(plist(b).length?" (pilih proyek di samping)":((b.ppk||[]).length?" (sudah terisi)":"")):"PPK (bidang sudah dihapus)";return""}
+ if(r.role=="ppk")return b?"PPK "+b.name+(plist(b).length?" (pilih kegiatan di samping)":((b.ppk||[]).length?" (sudah terisi)":"")):"PPK (bidang sudah dihapus)";return""}
 function pdBlock(){var ids=Object.keys(PD).filter(function(u){return!AK[PD[u].email]});if(!ids.length)return'';
  return'<div class="sb" id="pdb"><h2 style="font-size:15px">Login menunggu akses</h2><p class="hint">Akun Google berikut sudah mencoba masuk tetapi emailnya belum terdaftar. Periksa dulu bahwa orangnya memang berhak.</p>'+ids.map(function(u){var r=PD[u],w=r.role?pdWant(r):"";
   var pb=r.role=="ppk"?CFG.bidang.filter(function(x){return x.id==r.b})[0]:null,ps="";
-  if(pb&&plist(pb).length){var fr=plist(pb).filter(function(q){return!(q.ppk||[]).length});ps=fr.length?'<div><label>Proyek</label><select data-pdp="'+esc(u)+'"><option value="">Pilih proyek…</option>'+fr.map(function(q){return'<option value="'+esc(q.id)+'">'+esc(q.name)+'</option>'}).join("")+'</select></div>':'<div class="sub">semua proyek sudah punya PPK</div>'}
+  if(pb&&plist(pb).length){var fr=plist(pb).filter(function(q){return!(q.ppk||[]).length});ps=fr.length?'<div><label>Kegiatan</label><select data-pdp="'+esc(u)+'"><option value="">Pilih kegiatan…</option>'+fr.map(function(q){return'<option value="'+esc(q.id)+'">'+esc(q.name)+'</option>'}).join("")+'</select></div>':'<div class="sub">semua kegiatan sudah punya PPK</div>'}
   return'<div class="f"><div><b>'+esc(r.name||r.email)+'</b> <span class="sub">'+esc(r.email)+'</span><div class="sub">'+(w?'meminta menjadi '+esc(w):'belum memilih jabatan')+'</div></div>'+ps+(w?'<button class="pri" type="button" data-pdok="'+esc(u)+'">Setujui sebagai '+(r.role=="kabid"?'Kepala Bidang':'PPK')+'</button><button type="button" data-pdonly="'+esc(u)+'">Akses saja</button>':'<button class="pri" type="button" data-pdonly="'+esc(u)+'">Beri akses Pengguna</button>')+'<button type="button" data-pdadm="'+esc(u)+'">Jadikan Admin</button><button type="button" data-pdno="'+esc(u)+'">Tolak</button></div>'}).join("")+'</div>'}
 document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("#pdgo");if(!a)return;e.preventDefault();showTab("set");var el=$("pdb");if(!el){var st=$("set");if(st)st.scrollIntoView({behavior:"smooth",block:"start"});return}
  el.scrollIntoView({behavior:"smooth",block:"center"});var o=el.style.cssText;el.style.transition="background .4s";el.style.background="var(--warnb)";setTimeout(function(){el.style.background=""},1800)});
@@ -464,17 +482,34 @@ function akBlock(){if(!window.FBMODE)return"";var ks=Object.keys(AK).sort(),h=pd
  return h+'<div class="f"><div><label for="ake">Email</label><input type="email" id="ake" placeholder="nama@gmail.com"></div><div><label for="akr">Peran</label><select id="akr"><option value="user">Pengguna</option><option value="admin">Admin</option></select></div><button class="pri" type="button" id="aka">Tambahkan</button></div></div>'}
 function idBlock(){return'<div class="sb"><h2 style="font-size:15px">Identitas instansi</h2><div class="f"><div><label>Nama dinas / instansi</label><input type="text" style="min-width:320px" data-org="1" value="'+esc(CFG.org||"Dinas Pendidikan, Pemuda dan Olahraga")+'"></div><div><label>Tahun anggaran</label><input type="number" style="width:100px" data-thn="1" value="'+(CFG.tahun||2026)+'"></div></div></div>'}
 function kbh(b){var k=kb(b);return'<div>'+kbl(b)+': '+(k?'<span class="chip">'+esc(idt(k))+'<button type="button" aria-label="Cabut Kepala Bidang" data-rmk="'+esc(b.id)+'">×</button></span>':'<span class="sub">belum ada</span>')+'</div>'+(k?'':'<div class="f"><div><label>Tambah '+kbl(b)+'</label><input type="text" placeholder="Cari nama atau email" data-qk="'+esc(b.id)+'"><div class="res"></div></div></div>')}
-function pplk(u){var id=u.id,h='<div>PPK: '+((u.ppk||[]).map(function(x){return'<span class="chip">'+esc(idt(x))+'<button type="button" aria-label="Cabut PPK" data-rm="'+esc(id)+'|'+esc(x)+'">×</button></span>'}).join("")||'<span class="sub">belum ada</span>')+'</div>';
- return h+((u.ppk||[]).length?'<div class="msg">Sudah memiliki PPK. Untuk menggantinya, cabut dulu dengan tombol ×.</div>':'<div class="f"><div><label>Tambah PPK</label><input type="text" placeholder="Cari nama atau email" data-q="'+esc(id)+'"><div class="res"></div></div></div>')}
-function uf(u,pj,nc){return'<div class="f">'+(pj?'<div><label>Nama proyek</label><input type="text" style="min-width:240px" data-n="'+esc(u.id)+'" value="'+esc(u.name)+'"></div>':'')+'<div><label>Pagu'+(pj?' proyek':' bidang')+' (Rp juta)</label><input type="number" min="0" data-p="'+esc(u.id)+'" placeholder="0" value="'+(u.p||"")+'"></div>'+(pj?(nc?'':'<button type="button" data-clr="'+esc(u.id)+'">Kosongkan realisasi</button>')+'<button type="button" data-del="'+esc(u.id)+'">Hapus proyek</button>':'')+'</div>'+pplk(u)}
+function eml(u){return EM[u]?esc(EM[u]):'<span class="sub">–</span>'}
+function persB(b){return mgr(b)?saveKL(kb(b)):saveCFG()}
+function hasData(id){return Object.keys(RE).some(function(u){var e=(RE[u]&&RE[u].e)||{};return Object.keys(e).some(function(k){return k.indexOf(id+"_")===0})})}
+function mkUnit(b,name,ppk){var hd=hold(b);hd.proyek=hd.proyek||[];
+ if(!hd.proyek.length&&(hasData(b.id)||(b.ppk||[]).length)){hd.proyek=[{id:b.id,name:"Kegiatan 1",p:hasData(b.id)?(b.p||0):0,ppk:(b.ppk||[]).slice()}];if(hd===b)b.ppk=[]}
+ var n={id:"p"+Date.now().toString(36)+Math.floor(Math.random()*1296).toString(36),name:name||("Kegiatan "+(hd.proyek.length+1)),p:0,ppk:ppk||[]};hd.proyek.push(n);return n}
+function ppkTable(b,adm){
+ var l=plist(b),hp=l.length>0,h='<div class="scroll"><table class="xl"><thead><tr><th class="l">Nama PPK / kegiatan</th><th class="l">Email</th><th>Kelola anggaran (Rp juta)</th><th class="l"></th></tr></thead><tbody>';
+ if(!hp){var pk=(b.ppk||[])[0];
+  h+=pk?'<tr class="pg"><td class="l"><span class="chip">'+esc(nm(pk))+'<button type="button" aria-label="Cabut PPK" data-rm="'+esc(b.id)+'|'+esc(pk)+'">×</button></span> <span class="sub">mengelola seluruh pagu bidang</span></td><td class="l">'+eml(pk)+'</td><td>'+num(b.p||0)+'</td><td></td></tr>':'<tr><td class="l sub" colspan="4">Belum ada PPK atau kegiatan.</td></tr>'}
+ else{var gs=[],gm={};l.forEach(function(u){var id=(u.ppk||[])[0]||"";var g=gm[id];if(!g){g=gm[id]={id:id,us:[]};gs.push(g)}g.us.push(u)});
+  gs.sort(function(a,c){return(a.id==="")-(c.id==="")});
+  gs.forEach(function(g){var tot=g.us.reduce(function(a,u){return a+(u.p||0)},0);
+   if(g.id)h+='<tr class="pg"><td class="l"><span class="chip">'+esc(nm(g.id))+'<button type="button" aria-label="Cabut PPK" data-rmp="'+esc(b.id)+'|'+esc(g.id)+'">×</button></span></td><td class="l">'+eml(g.id)+'</td><td>'+num(tot)+'</td><td></td></tr>';
+   else h+='<tr class="pg"><td class="l" colspan="4"><span class="sub">Kegiatan yang belum punya PPK</span></td></tr>';
+   g.us.forEach(function(u){h+='<tr class="kg"><td class="l" style="padding-left:22px"><input type="text" data-n="'+esc(u.id)+'" placeholder="Nama kegiatan" value="'+esc(u.name)+'">'+(g.id?'':'<div style="margin-top:6px"><input type="text" placeholder="Tambah PPK: cari nama atau email" data-q="'+esc(u.id)+'"><div class="res"></div></div>')+'</td><td></td><td><input type="number" min="0" data-p="'+esc(u.id)+'" placeholder="0" value="'+(u.p||"")+'"></td><td class="l">'+(adm?'<button type="button" data-clr="'+esc(u.id)+'">Kosongkan realisasi</button> ':'')+'<button type="button" data-del="'+esc(u.id)+'">Hapus</button></td></tr>'});
+   if(g.id)h+='<tr><td class="l" colspan="4" style="padding-left:22px"><button type="button" data-addk="'+esc(b.id)+'|'+esc(g.id)+'">+ Tambah kegiatan untuk '+esc(nm(g.id))+'</button></td></tr>'})}
+ h+='<tr><td class="l" colspan="4"><div class="f" style="margin:6px 0 2px"><div><label>Tambah PPK</label><input type="text" placeholder="Cari nama atau email" data-qp="'+esc(b.id)+'"><div class="res"></div></div><button type="button" data-addp="'+esc(b.id)+'">Tambah kegiatan tanpa PPK</button></div></td></tr></tbody></table></div>';
+ if(hp){var al=bp(b),pg=b.p||0;h+='<div class="msg" style="margin:8px 0 0">Dikelola PPK: <b>Rp '+num(al)+' juta</b>'+(pg>0?' dari pagu bidang Rp '+num(pg)+' juta · '+(al>pg?'<span style="color:var(--late)">melebihi pagu Rp '+num(al-pg)+' juta</span>':'belum dialokasikan Rp '+num(pg-al)+' juta'):'')+'</div>'}
+ return h}
+function setBlock(b){var k=kb(b);
+ return'<div class="sb"><div class="f"><div><label>Nama bidang</label><input type="text" style="min-width:260px" data-bn="'+esc(b.id)+'" value="'+esc(b.name)+'"></div><div><label>Warna</label><input type="color" data-bc="'+esc(b.id)+'" value="'+bcol(b)+'" style="width:54px;height:38px;padding:2px"></div><button type="button" data-bclr="'+esc(b.id)+'">Kosongkan realisasi bidang</button><button type="button" data-bdel="'+esc(b.id)+'">Hapus bidang</button></div>'+
+ '<div class="scroll"><table class="xl"><thead><tr><th class="l">Nama '+kbl(b)+'</th><th class="l">Email</th><th>Pagu bidang (Rp juta)</th></tr></thead><tbody><tr class="pg"><td class="l">'+(k?'<span class="chip">'+esc(nm(k))+'<button type="button" aria-label="Cabut" data-rmk="'+esc(b.id)+'">×</button></span>':'<input type="text" placeholder="Cari nama atau email" data-qk="'+esc(b.id)+'"><div class="res"></div>')+'</td><td class="l">'+(k?eml(k):'')+'</td><td><input type="number" min="0" data-bpg="'+esc(b.id)+'" placeholder="0" value="'+(b.p||"")+'"></td></tr></tbody></table></div>'+ppkTable(b,true)+'</div>'}
 function renderSet(){
  var box=$("set");box.hidden=!isAdmin;if(!isAdmin)return;
- if(box.contains(document.activeElement)&&document.activeElement!==box)return;
- var h='<h2>Pengaturan bidang, proyek, dan PPK</h2><p class="hint">Ubah nama dan pagu bidang, tunjuk Kepala Bidang, tambahkan proyek bila satu bidang punya beberapa proyek dengan PPK berbeda, lalu daftarkan PPK. Pastikan semua pengguna sudah diberi akses Kontributor pada dashboard ini.</p>'+idBlock()+akBlock()+rqBlock()+catBlock();
- CFG.bidang.forEach(function(b){var l=plist(b),hp=l.length>0;
-  h+='<div class="sb"><div class="f"><div><label>Nama bidang</label><input type="text" style="min-width:260px" data-bn="'+esc(b.id)+'" value="'+esc(b.name)+'"></div><div><label>Warna</label><input type="color" data-bc="'+esc(b.id)+'" value="'+bcol(b)+'" style="width:54px;height:38px;padding:2px"></div>'+(hp?'<div><label>Pagu bidang (jumlah proyek, Rp juta)</label><input type="text" disabled value="'+num(bp(b))+'"></div>':'')+'<button type="button" data-bclr="'+esc(b.id)+'">Kosongkan realisasi bidang</button><button type="button" data-bdel="'+esc(b.id)+'">Hapus bidang</button></div>'+kbh(b);
-  if(hp){l.forEach(function(p){h+='<div style="margin:6px 0 10px 18px;padding-left:14px;border-left:3px solid var(--line)">'+uf(p,true)+'</div>'})}else h+=uf(b,false);
-  h+='<div class="f"><button type="button" data-addp="'+esc(b.id)+'">Tambah proyek</button></div></div>'});
+ if((box.contains(document.activeElement)&&document.activeElement!==box)||Date.now()-(box._f||0)<400){box._d=1;return}
+ var h='<h2>Pengaturan bidang, kegiatan, dan PPK</h2><p class="hint">Atur pagu tiap bidang dan tunjuk Kepala Bidang atau Sekretaris. Di bawahnya daftarkan PPK beserta kegiatan yang dikelola dan anggarannya. Satu PPK boleh mengelola beberapa kegiatan. Daftarkan email semua pengguna di bagian Akses pengguna.</p>'+idBlock()+akBlock()+rqBlock()+catBlock();
+ CFG.bidang.forEach(function(b){h+=setBlock(b)});
  h+='<div class="f"><button class="pri" type="button" id="addb">Tambah bidang</button><button type="button" id="defb">Isi bidang bawaan Dinas</button><button type="button" id="clrall">Hapus semua data realisasi</button></div>';
  box.innerHTML=h;
 }
@@ -484,6 +519,7 @@ function onChange(e){var t=e.target,r;
   if(t.dataset.thn){var y=parseInt(t.value);if(y>=2000&&y<=2100){CFG.tahun=y;saveCFG()}return}
   if(t.dataset.th){var a=(CFG.th||[5,15]).slice(),v=parseFloat(t.value);if(!(v>=0)){toast("Isi angka 0 atau lebih",true);return}a[+t.dataset.th]=v;if(a[1]<a[0]){toast("Batas kedua harus sama atau lebih besar dari batas pertama",true);return}CFG.th=a;saveCFG();return}
   if(t.dataset.tg){var g=T().slice(),v2=parseFloat(t.value);if(!(v2>=0&&v2<=100)){toast("Target harus antara 0 dan 100",true);return}g[+t.dataset.tg]=v2;CFG.tgt=g;saveCFG();return}
+  if(t.dataset.bpg){var bq=CFG.bidang.filter(function(x){return x.id==t.dataset.bpg})[0],vq=t.value.trim()===""?0:parseFloat(t.value);if(bq&&vq>=0){bq.p=vq;saveCFG()}return}
   if(t.dataset.bc){var bc=CFG.bidang.filter(function(x){return x.id==t.dataset.bc})[0];if(bc&&/^#[0-9a-f]{6}$/i.test(t.value)){bc.c=t.value;saveCFG()}return}
   if(t.dataset.bn){var bb=CFG.bidang.filter(function(x){return x.id==t.dataset.bn})[0];if(bb&&t.value.trim()){bb.name=t.value.trim().slice(0,80);saveCFG()}return}}
  if(t.dataset.n){r=fu(t.dataset.n);if(r&&canB(r.b)&&t.value.trim()){r.u.name=t.value.trim().slice(0,80);persU(r)}return}
@@ -495,7 +531,7 @@ function onClick(e){var t=e.target.closest("button");if(!t)return;var r,b0,a,hd;
  if(isAdmin){
   if(t.dataset.pdok||t.dataset.pdonly||t.dataset.pdadm){var pu=t.dataset.pdok||t.dataset.pdonly||t.dataset.pdadm,pd=PD[pu],pr=t.dataset.pdadm?"admin":"user",wr=!!t.dataset.pdok;
    if(pd){var bd=CFG.bidang.filter(function(x){return x.id==pd.b})[0],tg2=pd.b;
-    if(wr&&pd.role=="ppk"&&bd&&plist(bd).length){var sl=document.querySelector('select[data-pdp="'+pu+'"]');tg2=sl?sl.value:"";if(!tg2){toast("Pilih proyek untuk PPK ini dulu",true);return}}
+    if(wr&&pd.role=="ppk"&&bd&&plist(bd).length){var sl=document.querySelector('select[data-pdp="'+pu+'"]');tg2=sl?sl.value:"";if(!tg2){toast("Pilih kegiatan untuk PPK ini dulu",true);return}}
     t.blur();(async function(){try{await db.doc("akses/"+pd.email).set({role:pr})}catch(e){toast("Gagal memberi akses",true);return}
      if(wr&&pd.role){RQ[pu]={role:pd.role,b:tg2,e:pd.email,t:Date.now()};try{await approve(pu)}catch(e){toast("Akses diberikan, tetapi jabatan gagal diatur. Atur manual di Pengaturan.",true)}}
      try{await db.doc("pendaftar/"+pu).delete()}catch(e){}toast("Disetujui: "+pd.email+(wr&&pd.role?(pd.role=="kabid"?" menjadi Kepala Bidang":" menjadi PPK"):""))})()}return}
@@ -514,18 +550,20 @@ function onClick(e){var t=e.target.closest("button");if(!t)return;var r,b0,a,hd;
    if(b0){if(kb(b0))toast("Bidang ini sudah memiliki Kepala Bidang. Cabut dulu.",true);else if(CFG.bidang.some(function(x){return kb(x)==a[1]}))toast("Orang ini sudah menjadi Kepala Bidang di bidang lain.",true);else setKb(b0,a[1])}}}
  if(t.dataset.ok){approve(t.dataset.ok);return}
  if(t.dataset.kno){var rq=RQ[t.dataset.kno],q=rq&&fu(rq.b);if(q&&isKb(q.b)){hd=hold(q.b);hd.tolak=hd.tolak||{};hd.tolak[t.dataset.kno]=Date.now();saveKL(kb(q.b))}return}
- if(t.dataset.addp){b0=CFG.bidang.filter(function(x){return x.id==t.dataset.addp})[0];
-  if(b0&&canB(b0)){hd=hold(b0);if(!(hd.proyek&&hd.proyek.length)){hd.proyek=[{id:b0.id,name:"Proyek 1",p:b0.p||0,ppk:(b0.ppk||[]).slice()}];if(hd===b0)b0.ppk=[]}
-   hd.proyek.push({id:"p"+Date.now().toString(36),name:"Proyek baru",p:0,ppk:[]});if(hd===b0)saveCFG();else saveKL(kb(b0))}}
- if(t.dataset.del&&arm(t,"Klik lagi untuk menghapus proyek")){r=fu(t.dataset.del);
+ if(t.dataset.addp){b0=CFG.bidang.filter(function(x){return x.id==t.dataset.addp})[0];if(b0&&canB(b0)){mkUnit(b0,null,[]);persB(b0)}return}
+ if(t.dataset.addk){a=t.dataset.addk.split("|");b0=CFG.bidang.filter(function(x){return x.id==a[0]})[0];if(b0&&canB(b0)){mkUnit(b0,null,[a[1]]);persB(b0)}return}
+ if(t.dataset.pickp){a=t.dataset.pickp.split("|");b0=CFG.bidang.filter(function(x){return x.id==a[0]})[0];
+  if(b0&&canB(b0)){if(plist(b0).some(function(u){return(u.ppk||[])[0]==a[1]})||(b0.ppk||[])[0]==a[1]){toast("PPK ini sudah terdaftar di bidang ini. Pakai tombol Tambah kegiatan di bawah namanya.",true);return}mkUnit(b0,null,[a[1]]);persB(b0)}return}
+ if(t.dataset.rmp&&arm(t,"Klik lagi untuk mencabut")){a=t.dataset.rmp.split("|");b0=CFG.bidang.filter(function(x){return x.id==a[0]})[0];if(b0&&canB(b0)){plist(b0).forEach(function(u){if((u.ppk||[])[0]==a[1])u.ppk=[]});persB(b0)}}
+ if(t.dataset.del&&arm(t,"Klik lagi untuk menghapus kegiatan")){r=fu(t.dataset.del);
   if(r&&r.u!==r.b&&canB(r.b)){hd=hold(r.b);hd.proyek=(hd.proyek||[]).filter(function(p){return p!==r.u});if(hd===r.b){if(!hd.proyek.length)delete hd.proyek;saveCFG()}else saveKL(kb(r.b))}}
  if(t.dataset.rm){a=t.dataset.rm.split("|");r=fu(a[0]);if(r&&canB(r.b)){r.u.ppk=(r.u.ppk||[]).filter(function(u){return u!=a[1]});persU(r)}}
  if(t.dataset.pick){a=t.dataset.pick.split("|");r=fu(a[0]);if(r&&canB(r.b)){r.u.ppk=r.u.ppk||[];if(r.u.ppk.length){toast("Sudah memiliki PPK ("+nm(r.u.ppk[0])+"). Cabut dulu PPK tersebut sebelum menambahkan yang baru.",true);return}r.u.ppk.push(a[1]);persU(r)}}}
-async function onInput(e){var t=e.target,k=!!t.dataset.qk;if(!t.dataset.q&&!k)return;var id=k?t.dataset.qk:t.dataset.q,q=t.value.trim(),box=t.nextElementSibling;
+async function onInput(e){var t=e.target,kind=t.dataset.qk?"pickk":t.dataset.qp?"pickp":t.dataset.q?"pick":"";if(!kind)return;var id=t.dataset.qk||t.dataset.qp||t.dataset.q,q=t.value.trim(),box=t.nextElementSibling;
  if(q.length<2){box.innerHTML="";return}
- try{var hits=await usr.search(q);hits.forEach(function(x){NAMES[x.id]=x.name});box.innerHTML=hits.slice(0,6).map(function(x){return'<button type="button" data-'+(k?"pickk":"pick")+'="'+esc(id)+'|'+esc(x.id)+'">'+esc(x.name||x.email||"Tanpa nama")+(x.email&&x.name?" · "+esc(x.email):"")+'</button>'}).join("")||'<div class="msg">Tidak ditemukan.</div>'}
+ try{var hits=await usr.search(q);hits.forEach(function(x){NAMES[x.id]=x.name});box.innerHTML=hits.slice(0,6).map(function(x){return'<button type="button" data-'+kind+'="'+esc(id)+'|'+esc(x.id)+'">'+esc(x.name||x.email||"Tanpa nama")+(x.email&&x.name?" · "+esc(x.email):"")+'</button>'}).join("")||'<div class="msg">Tidak ditemukan.</div>'}
  catch(er){box.innerHTML='<div class="msg e">Pencarian pengguna tidak tersedia.</div>'}}
-["set","kb"].forEach(function(i){var el=$(i);el.addEventListener("change",onChange);el.addEventListener("click",onClick);el.addEventListener("input",onInput)});
+["set","kb"].forEach(function(i){var el=$(i);el.addEventListener("focusin",function(){el._f=Date.now()});el.addEventListener("focusout",function(){el._f=Date.now();setTimeout(function(){if(el._d&&!el.contains(document.activeElement)&&Date.now()-el._f>=380){el._d=0;render()}},430)});el.addEventListener("change",onChange);el.addEventListener("click",onClick);el.addEventListener("input",onInput)});
 async function need(){var ids={};(CFG.admins||[]).forEach(function(u){ids[u]=1});CFG.bidang.forEach(function(b){(b.kabid||[]).forEach(function(u){ids[u]=1})});allUnits().forEach(function(x){(x.u.ppk||[]).forEach(function(u){ids[u]=1})});Object.keys(RE).forEach(function(u){ids[u]=1});Object.keys(RQ).forEach(function(u){ids[u]=1});Object.keys(KL).forEach(function(u){ids[u]=1});
  var n=Object.keys(ids).filter(function(u){return!(u in NAMES)});if(!n.length)return;n.forEach(function(u){NAMES[u]=""});
  try{var ps=await usr.profiles(n);n.forEach(function(u){NAMES[u]=(ps[u]&&ps[u].name)||"";EM[u]=(ps[u]&&ps[u].email)||""})}catch(e){}render()}
