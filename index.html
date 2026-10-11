@@ -480,10 +480,12 @@ function renderInput(force){
  (isK?'<div><label for="ikn">Nama kegiatan (dapat Anda ubah)</label><input id="ikn" type="text" style="min-width:230px" value="'+esc(u.name)+'"></div>':'')+
  '<div><label for="ir">Realisasi keuangan (Rp juta)</label><input id="ir" type="number" min="0" step="any" value="'+(cr==null?"":cr)+'" placeholder="mis. '+num(prev)+'"></div>'+
  '<div><label for="if">Realisasi fisik (%)</label><input id="if" type="number" min="0" max="100" step="0.1" value="'+(cf==null?"":cf)+'"></div>'+
- '<button class="pri" id="isv" type="button">Simpan realisasi</button></div><div class="msg" id="imsg"></div>'+'';
+ '<button class="pri" id="isv" type="button">Simpan realisasi</button><button type="button" id="icm"'+(cr==null&&cf==null?' disabled':'')+'>Hapus input '+BLN[M-1]+'</button><button type="button" id="ica"'+(x.r.every(function(v){return v==null})&&x.f.every(function(v){return v==null})?' disabled':'')+'>Hapus semua input</button></div><div class="msg" id="imsg"></div>'+'';
  $("ib").onchange=function(){IB=this.value;renderInput(true)};
  if($("ikn"))$("ikn").onchange=async function(){var v=this.value.trim().slice(0,80);if(!v)return;try{var d=RE[myId]?JSON.parse(JSON.stringify(RE[myId])):{};d.e=d.e||{};d.nm=d.nm||{};d.nm[u.id]={n:v,t:Date.now()};await db.doc("realisasi/"+myId).set(d);toast("Nama kegiatan tersimpan")}catch(e){toast("Gagal menyimpan nama",true)}};
 
+ $("icm").onclick=function(){var bt=this;if(!arm(bt,"Klik lagi untuk menghapus"))return;bt.blur();ownClr(u.id,M)};
+ $("ica").onclick=function(){var bt=this;if(!arm(bt,"Klik lagi untuk menghapus semua"))return;bt.blur();ownClr(u.id,null)};
  $("isv").onclick=async function(){var r=parseFloat($("ir").value),f=parseFloat($("if").value),m=$("imsg");m.className="msg e";
   if(isNaN(r)||isNaN(f)){m.textContent="Isi realisasi keuangan dan fisik.";return}
   if(r<prev&&!isAdmin){m.textContent="Realisasi kumulatif tidak boleh lebih kecil dari bulan sebelumnya (Rp "+num(prev)+" juta).";return}
@@ -584,6 +586,7 @@ function onChange(e){var t=e.target,r;
  if(t.dataset.n){r=fu(t.dataset.n);if(r&&canB(r.b)&&t.value.trim()){r.u.name=t.value.trim().slice(0,80);r.u.nt=Date.now();persU(r)}return}
  if(t.dataset.p){r=fu(t.dataset.p);var v3=t.value.trim()===""?0:parseFloat(t.value);if(r&&canB(r.b)&&v3>=0){r.u.p=v3;persU(r)}}}
 function arm(t,txt){if(t._a){t._a=0;clearTimeout(t._t);return true}t._a=1;t._o=t.textContent;t.textContent=txt;t._t=setTimeout(function(){t._a=0;t.textContent=t._o},4000);return false}
+async function ownClr(id,m){try{var d=RE[myId]?JSON.parse(JSON.stringify(RE[myId])):{};d.e=d.e||{};Object.keys(d.e).forEach(function(k){if(m?k===id+"_"+m:k.indexOf(id+"_")===0)delete d.e[k]});await db.doc("realisasi/"+myId).set(d);toast(m?"Input bulan ini dihapus":"Semua input dihapus")}catch(e){toast("Gagal menghapus: "+((e&&(e.message||e.code))||"tidak diketahui"),true)}}
 async function clrMonth(id,m){try{var ks=Object.keys(RE);for(var i=0;i<ks.length;i++){var d=JSON.parse(JSON.stringify(RE[ks[i]]));if(d.e&&d.e[id+"_"+m]!==undefined){delete d.e[id+"_"+m];await db.doc("realisasi/"+ks[i]).set(d)}}toast("Input bulan ini dikosongkan")}catch(e){toast("Gagal mengosongkan: "+((e&&(e.message||e.code))||"tidak diketahui"),true)}}
 async function clr(ids){try{var ks=Object.keys(RE);for(var i=0;i<ks.length;i++){var d=JSON.parse(JSON.stringify(RE[ks[i]]));d.e=d.e||{};Object.keys(d.e).forEach(function(k){if(!ids||ids.some(function(id){return k.indexOf(id+"_")===0}))delete d.e[k]});await db.doc("realisasi/"+ks[i]).set(d)}toast("Data realisasi dikosongkan")}catch(e){toast("Gagal mengosongkan: "+((e&&(e.message||e.code))||"tidak diketahui"),true)}}
 function onClick(e){var t=e.target.closest("button");if(!t)return;var r,b0,a,hd;
