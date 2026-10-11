@@ -280,7 +280,7 @@ function units(b){var l=plist(b);return l.length?l:[b]}
 function allUnits(){var o=[];CFG.bidang.forEach(function(b){units(b).forEach(function(u){o.push({b:b,u:u})})});return o}
 function fu(id){var r=null;CFG.bidang.forEach(function(b){var l=plist(b);if(l.length){l.forEach(function(p){if(p.id==id)r={u:p,b:b}})}else if(b.id==id)r={u:b,b:b}});return r}
 function bpagu(b){return(b.p>0)?b.p:bp(b)}
-function up(u){if(CFG&&CFG.bidang.indexOf(u)>=0){var l=kgList((u.ppk||[])[0],u.id);if(l.length)return kgTot(l)}return u.p||0}
+function up(u){if(CFG&&CFG.bidang.indexOf(u)>=0&&(u.ppk||[])[0])return kgTot(kgList(u.ppk[0],u.id));return u.p||0}
 function bp(b){return units(b).reduce(function(a,u){return a+up(u)},0)}
 function uname(x){return x.u===x.b?x.b.name:x.b.name+" › "+x.u.name}
 function mine(){return allUnits().filter(function(x){return isAdmin||(x.u.ppk||[]).slice(0,1).indexOf(myId)>=0})}
@@ -489,6 +489,7 @@ function renderInput(force){
  $("isv").onclick=async function(){var r=parseFloat($("ir").value),f=parseFloat($("if").value),m=$("imsg");m.className="msg e";
   if(isNaN(r)||isNaN(f)){m.textContent="Isi realisasi keuangan dan fisik.";return}
   if(r<prev&&!isAdmin){m.textContent="Realisasi kumulatif tidak boleh lebih kecil dari bulan sebelumnya (Rp "+num(prev)+" juta).";return}
+  if(!(up(u)>0)){m.textContent="Isi dulu kegiatan dan anggaran Anda di tabel Rincian per bidang (bagian Kegiatan yang Anda jalankan), lalu simpan.";return}
   if(r>up(u)){m.textContent="Realisasi melebihi anggaran yang Anda kelola (Rp "+num(up(u))+" juta).";return}
   if(f<0||f>100){m.textContent="Fisik harus antara 0 dan 100.";return}
   try{var d=RE[myId]?JSON.parse(JSON.stringify(RE[myId])):{};d.e=d.e||{};d.e[u.id+"_"+M]={r:r,f:f,t:Date.now()};
