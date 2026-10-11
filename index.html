@@ -115,6 +115,12 @@ table.xl{min-width:560px}
 .xl .kg td{font-size:13.5px}
 .xl td input[type=text]{width:100%;min-width:200px;text-align:left}
 .xl td input[type=number]{width:130px}
+.stk{display:flex;height:16px;border-radius:99px;overflow:hidden;background:var(--bg);margin:6px 0 12px}
+.stk i{display:block;height:100%}
+.legend2{display:flex;gap:8px 22px;flex-wrap:wrap}
+.lg{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mut)}
+.lg i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.lg b{color:var(--ink)}
 @media (max-width:860px){.grid{grid-template-columns:1fr}.band{grid-template-columns:1fr 1fr}h1{font-size:22px}header{padding:20px 18px}}
 @media (max-width:480px){.band{grid-template-columns:1fr}}
 @media print{.ctl,.tabs{display:none}body{background:#fff}header{background:#fff;color:#000;box-shadow:none}.panel,.rb{break-inside:avoid;box-shadow:none}}
@@ -145,6 +151,7 @@ table.xl{min-width:560px}
   <div class="kpi"><div class="l">Realisasi fisik (rata-rata berbobot)</div><div class="v" id="k3"></div><div class="n" id="k3n"></div></div>
   <div class="kpi"><div class="l">Selisih dari target bulan ini</div><div class="v" id="k4"></div><div class="n" id="k4n"></div></div>
 </section>
+<section class="panel" id="alur" hidden style="margin-bottom:18px"></section>
 <div class="grid">
   <section class="panel">
     <h2>Progres tiap bidang</h2>
@@ -309,6 +316,12 @@ function rincian(rows){if(!rows.length)return'<div class="empty">Belum ada bidan
    '<div class="kv">'+(r.own?'<div><span>Anggaran Anda</span><b>Rp '+num(r.p)+' juta</b></div>':'<div><span>Pagu bidang</span><b>Rp '+num(r.p)+' juta</b></div><div><span>Dikelola PPK</span><b>Rp '+num(r.al)+' juta</b>'+(bel>0.0001?' <span style="display:inline">· sisa '+num(bel)+'</span>':'')+'</div>')+'<div><span>Terealisasi</span><b>Rp '+num(r.real)+' juta</b> <span style="display:inline">· '+num(r.pct,1)+'%</span></div><div><span>Fisik</span><b>'+num(r.fis,1)+'%</b></div></div>'+
    '<div class="pbar"><i style="width:'+Math.min(100,r.pct)+'%;background:'+c+'"></i></div>'+
    '<div class="scroll"><table style="min-width:620px"><thead><tr><th class="l">PPK / kegiatan</th><th class="l">Email</th><th>Anggaran dikelola (Rp juta)</th><th>Keuangan (Rp juta)</th><th>Keuangan</th><th>Fisik</th><th class="l">Keterangan PPK</th></tr></thead><tbody>'+body+'</tbody></table></div></div>'}).join("")}
+function alur(PD,SB,P,R){var seg=[{n:"Terealisasi",v:R,c:"#10b981"},{n:"Dikelola PPK, belum terealisasi",v:Math.max(0,P-R),c:"#4f46e5"},{n:"Di bidang, belum ke PPK",v:Math.max(0,SB-P),c:"#f59e0b"},{n:"Belum dialokasikan ke bidang",v:Math.max(0,PD-SB),c:"#cbd5e1"}];
+ var tot=seg.reduce(function(a,s){return a+s.v},0)||1;
+ var bar='<div class="stk">'+seg.map(function(s){return s.v>0?'<i style="width:'+(s.v/tot*100)+'%;background:'+s.c+'" title="'+s.n+'"></i>':''}).join("")+'</div>';
+ var lg=seg.map(function(s){return'<div class="lg"><i style="background:'+s.c+'"></i><span>'+s.n+'</span><b>'+rp(s.v)+'</b></div>'}).join("");
+ var warn=(CFG.pagu>0&&SB>PD+0.0001)?'<div class="alert">Total pagu bidang (Rp '+num(SB)+' juta) melebihi pagu dinas (Rp '+num(PD)+' juta) sebesar Rp '+num(SB-PD)+' juta.</div>':'';
+ return'<h2>Alokasi pagu dinas</h2><p class="hint">Dari pagu dinas dibagi ke bidang, lalu ke PPK, sampai terealisasi.</p><div class="kv"><div><span>Pagu dinas</span><b>Rp '+num(PD)+' juta</b></div><div><span>Dialokasikan ke bidang</span><b>Rp '+num(SB)+' juta</b></div><div><span>Dikelola PPK</span><b>Rp '+num(P)+' juta</b></div><div><span>Terealisasi</span><b>Rp '+num(R)+' juta</b> <span style="display:inline">· '+num(PD?R/PD*100:0,1)+'% dari pagu dinas</span></div></div>'+bar+'<div class="legend2">'+lg+'</div>'+warn+(CFG.pagu>0?'':'<div class="msg">Pagu dinas belum diisi, jadi memakai jumlah pagu bidang. Isi di Pengaturan, bagian Identitas instansi.</div>')}
 function rp(v){return Math.abs(v)>=1000?"Rp "+num(v/1000,1)+" M":"Rp "+num(v)+" juta"}
 function ppkAgg(tg){var m={},un=0;
  UL.forEach(function(y){var u=(y.u.ppk||[])[0],r=ur(y,tg);
@@ -351,13 +364,14 @@ function render(){
   us.forEach(function(r){p+=r.p;real+=r.real;fw+=r.fis*r.p;if(!r.nd)nd=false;if(r.lm&&(!lm||r.lm.t>lm.t))lm=r.lm});
   var fis=p?fw/p:0,pct=p>0?real/p*100:0,gap=pct-tg;
   rows.push({b:b,n:b.name,p:p,al:p,real:real,fis:fis,pct:pct,gap:gap,s:nd?"none":st(gap),k:nd?"none":(pct>=99.995&&fis>=99.995)?"done":pct>=99.995?"keu":fis>=99.995?"fisik":"blm",kt:null,need:Math.max(0,tg/100*p-real),sisa:p-real,lm:lm,hp:true,us:us,own:true})});
- var AG=ppkAgg(tg);AG.list.forEach(function(a){P+=a.p;R+=a.real;F+=a.fw});F=P?F/P:0;var pct=P?R/P*100:0,gap=pct-tg;
+ var AG=ppkAgg(tg);AG.list.forEach(function(a){P+=a.p;R+=a.real;F+=a.fw});F=P?F/P:0;var pct=P?R/P*100:0,gap=pct-tg;var SB=0;rows.forEach(function(r){if(!r.own)SB+=r.p});var PD=CFG.pagu>0?CFG.pagu:SB;
  var mi=mine().map(uname),kbn=CFG.bidang.filter(isKb).map(kbt);
  $("role").innerHTML=who()+" · "+(isAdmin?"Pimpinan/admin"+(Object.keys(RQ).length?" · <b>"+Object.keys(RQ).length+" permintaan PPK menunggu persetujuan</b>":""):((kbn.length?esc(kbn.join(", ")):"")+(kbn.length&&mi.length?" · ":"")+(mi.length?"PPK "+esc(mi.join(", ")):"")||"Belum terdaftar"));
  var priv=!isAdmin&&!mi.length&&!kbn.length;document.querySelectorAll("#main .band,#main .grid,#tabs,#rincian,#rekap,#ppkrank").forEach(function(el){el.hidden=priv});
  $("chart").parentNode.querySelector(".hint").textContent=isAdmin?"Seluruh bidang, dibandingkan dengan target tiap bulan.":"Bidang dan kegiatan Anda, dibandingkan dengan target tiap bulan.";
  $("bln").textContent=BLN[M-1]+" "+(CFG.tahun||2026);$("org").textContent=CFG.org||"Dinas Pendidikan, Pemuda dan Olahraga";$("thn").textContent=CFG.tahun||2026;document.title="Dashboard Serapan Anggaran – "+$("org").textContent;var a_=CFG.th||[5,15];document.querySelector(".foot").textContent="Status: Sesuai target bila selisih paling banyak "+a_[0]+" poin di bawah target, Perlu dipercepat bila "+a_[0]+" sampai "+a_[1]+" poin di bawah target, Terlambat bila lebih dari "+a_[1]+" poin di bawah target. Batas dapat diubah admin di bagian Pengaturan.";
- $("k1").textContent=rp(P);$("k1n").textContent=isAdmin?AG.list.length+" PPK · pagu bidang "+rp(rows.reduce(function(a,r){return a+r.p},0))+(AG.un>0?" · "+rp(AG.un)+" belum ada PPK":""):rows.length+" bidang/kegiatan Anda";
+ $("k1").textContent=rp(isAdmin?PD:P);document.querySelector(".kpi .l").textContent=isAdmin?"Pagu dinas":"Anggaran Anda";$("k1n").textContent=isAdmin?"ke bidang "+rp(SB)+" · ke PPK "+rp(P)+(CFG.pagu>0?"":" · pagu dinas belum diisi"):rows.length+" bidang/kegiatan Anda";
+ if(isAdmin){$("alur").hidden=false;$("alur").innerHTML=alur(PD,SB,P,R)}else $("alur").hidden=true;
  $("k2").textContent=num(pct,1)+"%";$("k2n").textContent=rp(R)+" · target "+tg+"%";
  $("k3").textContent=num(F,1)+"%";$("k3n").textContent=F<pct?"Fisik tertinggal dari keuangan":"Fisik sejalan dengan keuangan";
  $("k4").textContent=(gap>=0?"+":"")+num(gap,1)+" poin";$("k4n").textContent=(rows.every(function(r){return r.s=="none"})?SL.none:SL[st(gap)])+" · sisa "+rp(P-R);
@@ -480,7 +494,7 @@ function pdNote(){var n=Object.keys(PD).filter(function(u){return!AK[PD[u].email
 function akBlock(){if(!window.FBMODE)return"";var ks=Object.keys(AK).sort(),h=pdBlock()+'<div class="sb"><h2 style="font-size:15px">Akses pengguna</h2><p class="hint">Hanya email yang terdaftar di sini yang bisa membuka dashboard. Daftarkan email akun Google semua admin, Kepala Bidang, dan PPK.</p>';
  ks.forEach(function(e){h+='<div class="f"><div><b>'+esc(e)+'</b><div class="sub">'+(AK[e].role=="admin"?"Admin":"Pengguna")+'</div></div><button type="button" data-ake="'+esc(e)+'">Hapus akses</button></div>'});
  return h+'<div class="f"><div><label for="ake">Email</label><input type="email" id="ake" placeholder="nama@gmail.com"></div><div><label for="akr">Peran</label><select id="akr"><option value="user">Pengguna</option><option value="admin">Admin</option></select></div><button class="pri" type="button" id="aka">Tambahkan</button></div></div>'}
-function idBlock(){return'<div class="sb"><h2 style="font-size:15px">Identitas instansi</h2><div class="f"><div><label>Nama dinas / instansi</label><input type="text" style="min-width:320px" data-org="1" value="'+esc(CFG.org||"Dinas Pendidikan, Pemuda dan Olahraga")+'"></div><div><label>Tahun anggaran</label><input type="number" style="width:100px" data-thn="1" value="'+(CFG.tahun||2026)+'"></div></div></div>'}
+function idBlock(){return'<div class="sb"><h2 style="font-size:15px">Identitas instansi</h2><div class="f"><div><label>Nama dinas / instansi</label><input type="text" style="min-width:320px" data-org="1" value="'+esc(CFG.org||"Dinas Pendidikan, Pemuda dan Olahraga")+'"></div><div><label>Tahun anggaran</label><input type="number" style="width:100px" data-thn="1" value="'+(CFG.tahun||2026)+'"></div><div><label>Pagu dinas (Rp juta)</label><input type="number" min="0" style="width:150px" data-pagu="1" placeholder="0" value="'+(CFG.pagu||"")+'"></div></div></div>'}
 function kbh(b){var k=kb(b);return'<div>'+kbl(b)+': '+(k?'<span class="chip">'+esc(idt(k))+'<button type="button" aria-label="Cabut Kepala Bidang" data-rmk="'+esc(b.id)+'">×</button></span>':'<span class="sub">belum ada</span>')+'</div>'+(k?'':'<div class="f"><div><label>Tambah '+kbl(b)+'</label><input type="text" placeholder="Cari nama atau email" data-qk="'+esc(b.id)+'"><div class="res"></div></div></div>')}
 function eml(u){return EM[u]?esc(EM[u]):'<span class="sub">–</span>'}
 function persB(b){return mgr(b)?saveKL(kb(b)):saveCFG()}
@@ -516,6 +530,7 @@ function renderSet(){
 function onChange(e){var t=e.target,r;
  if(isAdmin){
   if(t.dataset.org){var o=t.value.trim();if(o){CFG.org=o.slice(0,120);saveCFG()}return}
+  if(t.dataset.pagu){var pv=t.value.trim()===""?0:parseFloat(t.value);if(pv>=0){CFG.pagu=pv;saveCFG()}return}
   if(t.dataset.thn){var y=parseInt(t.value);if(y>=2000&&y<=2100){CFG.tahun=y;saveCFG()}return}
   if(t.dataset.th){var a=(CFG.th||[5,15]).slice(),v=parseFloat(t.value);if(!(v>=0)){toast("Isi angka 0 atau lebih",true);return}a[+t.dataset.th]=v;if(a[1]<a[0]){toast("Batas kedua harus sama atau lebih besar dari batas pertama",true);return}CFG.th=a;saveCFG();return}
   if(t.dataset.tg){var g=T().slice(),v2=parseFloat(t.value);if(!(v2>=0&&v2<=100)){toast("Target harus antara 0 dan 100",true);return}g[+t.dataset.tg]=v2;CFG.tgt=g;saveCFG();return}
