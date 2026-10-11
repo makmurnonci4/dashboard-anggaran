@@ -310,13 +310,13 @@ function rincian(rows){if(!rows.length)return'<div class="empty">Belum ada bidan
   gs.sort(function(a,c2){return(a.id==="")-(c2.id==="")});
   var body="";
   gs.forEach(function(g){var pct=g.p>0?g.real/g.p*100:0,fis=g.p?g.fw/g.p:0,k=g.nd?"none":(pct>=99.995&&fis>=99.995)?"done":pct>=99.995?"keu":fis>=99.995?"fisik":"blm";
-   body+='<tr class="pg"><td class="l"><b>'+(g.id?esc(nm(g.id)):'<span class="sub">Belum ada PPK</span>')+'</b>'+'</td><td class="l">'+(g.id&&EM[g.id]?esc(EM[g.id]):'')+'</td><td>'+num(g.p)+'</td><td>'+num(g.real)+'</td><td>'+num(pct,1)+'%</td><td>'+num(fis,1)+'%</td><td class="l">'+kp({k:k,p:g.p,real:g.real})+'</td></tr>';
+   body+='<tr class="pg"><td class="l"><b>'+(g.id?esc(nm(g.id)):'<span class="sub">Belum ada PPK</span>')+'</b>'+'</td><td class="l">'+(g.id&&EM[g.id]?esc(EM[g.id]):'')+'</td><td>'+num(g.p)+'</td><td>'+num(g.real)+'</td><td>'+num(pct,1)+'%</td><td>'+num(fis,1)+'%</td><td class="l">'+kp({k:k,p:g.p,real:g.real})+'</td><td class="l">'+((g.id&&canB(b))?'<button type="button" data-'+(g.us.some(function(u){return u.u===b})?'rm':'rmp')+'="'+esc(b.id)+'|'+esc(g.id)+'">Hapus PPK</button>':'')+'</td></tr>';
    if(g.us.some(function(u){return u.u!==b}))g.us.forEach(function(u){body+='<tr class="kg"><td class="l" style="padding-left:26px">↳ '+esc(u.u===b?"Seluruh bidang":u.n)+'</td><td></td><td>'+num(u.p)+'</td><td>'+num(u.real)+'</td><td>'+num(u.pct,1)+'%</td><td>'+num(u.fis,1)+'%</td><td class="l">'+kp(u)+'</td></tr>'});body+=kgRows(g,b)});
   var bel=r.p-r.al;
   return'<div class="rb" style="--bc:'+c+'"><div class="rh"><span class="rt">'+dot(b)+esc(r.n)+'</span><span class="pill '+r.s+'">'+SL[r.s]+'</span></div>'+who+
    '<div class="kv">'+(r.own?'<div><span>Anggaran Anda</span><b>Rp '+num(r.p)+' juta</b></div>':'<div><span>Pagu bidang</span><b>Rp '+num(r.p)+' juta</b></div><div><span>Dikelola PPK</span><b>Rp '+num(r.al)+' juta</b>'+(bel>0.0001?' <span style="display:inline">· sisa '+num(bel)+'</span>':'')+'</div>')+'<div><span>Terealisasi</span><b>Rp '+num(r.real)+' juta</b> <span style="display:inline">· '+num(r.pct,1)+'%</span></div><div><span>Fisik</span><b>'+num(r.fis,1)+'%</b></div></div>'+
    '<div class="pbar"><i style="width:'+Math.min(100,r.pct)+'%;background:'+c+'"></i></div>'+
-   '<div class="scroll"><table style="min-width:620px"><thead><tr><th class="l">PPK / kegiatan</th><th class="l">Email</th><th>Anggaran dikelola (Rp juta)</th><th>Keuangan (Rp juta)</th><th>Keuangan</th><th>Fisik</th><th class="l">Keterangan PPK</th></tr></thead><tbody>'+body+'</tbody></table></div></div>'}).join("")}
+   '<div class="scroll"><table style="min-width:620px"><thead><tr><th class="l">PPK / kegiatan</th><th class="l">Email</th><th>Anggaran dikelola (Rp juta)</th><th>Keuangan (Rp juta)</th><th>Keuangan</th><th>Fisik</th><th class="l">Keterangan PPK</th><th></th></tr></thead><tbody>'+body+'</tbody></table></div></div>'}).join("")}
 function alur(PD,SB,P,R){var seg=[{n:"Terealisasi",v:R,c:"#10b981"},{n:"Dikelola PPK, belum terealisasi",v:Math.max(0,P-R),c:"#4f46e5"},{n:"Di bidang, belum ke PPK",v:Math.max(0,SB-P),c:"#f59e0b"},{n:"Belum dialokasikan ke bidang",v:Math.max(0,PD-SB),c:"#cbd5e1"}];
  var tot=seg.reduce(function(a,s){return a+s.v},0)||1;
  var bar='<div class="stk">'+seg.map(function(s){return s.v>0?'<i style="width:'+(s.v/tot*100)+'%;background:'+s.c+'" title="'+s.n+'"></i>':''}).join("")+'</div>';
@@ -351,9 +351,9 @@ function kgInit(bx,u){if(!bx)return;
    try{var d=RE[myId]?JSON.parse(JSON.stringify(RE[myId])):{};d.e=d.e||{};d.kg=d.kg||{};d.kg[u.id]=rows.map(function(k){return{id:k.id,n:k.n.trim().slice(0,80),p:+k.p||0,t:Date.now()}});await db.doc("realisasi/"+myId).set(d);delete KGD[u.id];toast("Kegiatan tersimpan")}catch(x){m.className="msg e";m.textContent="Gagal menyimpan kegiatan. Coba lagi."}}};
  draw()}
 function kgRows(g,b){var id=g.id;if(!id||g.us.some(function(u){return u.u!==b}))return"";
- if(id===myId&&!isAdmin)return'<tr class="kg"><td class="l" colspan="7" style="padding:10px 12px"><div class="kgbox" data-ku="'+esc(b.id)+'"></div></td></tr>';var l=kgList(id,b.id),pagu=b.p||0,sisa=pagu-kgTot(l),h="";
+ if(id===myId&&!isAdmin)return'<tr class="kg"><td class="l" colspan="8" style="padding:10px 12px"><div class="kgbox" data-ku="'+esc(b.id)+'"></div></td></tr>';var l=kgList(id,b.id),pagu=b.p||0,sisa=pagu-kgTot(l),h="";
  l.forEach(function(k){h+='<tr class="kg"><td class="l" style="padding-left:26px">↳ '+esc(k.n)+'</td><td></td><td>'+num(k.p)+'</td><td></td><td></td><td></td><td></td></tr>'});
- if(pagu>0&&sisa>0.0001)h+='<tr class="kg"><td class="l" colspan="7" style="padding-left:26px;color:var(--late)">'+(l.length?'Sisa pagu Rp '+num(sisa)+' juta belum punya kegiatan.':'Belum ada kegiatan yang didata.')+' Tambah kegiatan atau bagikan sisa pagu ke PPK lain sampai seluruh pagu terpenuhi.</td></tr>';
+ if(pagu>0&&sisa>0.0001)h+='<tr class="kg"><td class="l" colspan="8" style="padding-left:26px;color:var(--late)">'+(l.length?'Sisa pagu Rp '+num(sisa)+' juta belum punya kegiatan.':'Belum ada kegiatan yang didata.')+' Tambah kegiatan atau bagikan sisa pagu ke PPK lain sampai seluruh pagu terpenuhi.</td></tr>';
  return h}
 function applyNames(){var re=/^(proyek|anggaran)\s+(baru|\d+)$/i,chC=false,kls={};
  function fx(n){var m=re.exec(n||"");return m?"Kegiatan "+m[2].toLowerCase():n}
@@ -619,7 +619,7 @@ function onClick(e){var t=e.target.closest("button");if(!t)return;var r,b0,a,hd;
  if(t.dataset.rmp&&arm(t,"Klik lagi untuk mencabut")){a=t.dataset.rmp.split("|");b0=CFG.bidang.filter(function(x){return x.id==a[0]})[0];if(b0&&canB(b0)){plist(b0).forEach(function(u){if((u.ppk||[])[0]==a[1])u.ppk=[]});persB(b0)}}
  if(t.dataset.del&&arm(t,"Klik lagi untuk menghapus kegiatan")){r=fu(t.dataset.del);
   if(r&&r.u!==r.b&&canB(r.b)){hd=hold(r.b);hd.proyek=(hd.proyek||[]).filter(function(p){return p!==r.u});if(hd===r.b){if(!hd.proyek.length)delete hd.proyek;saveCFG()}else saveKL(kb(r.b))}}
- if(t.dataset.rm){a=t.dataset.rm.split("|");r=fu(a[0]);if(r&&canB(r.b)){r.u.ppk=(r.u.ppk||[]).filter(function(u){return u!=a[1]});persU(r)}}
+ if(t.dataset.rm&&arm(t,"Klik lagi untuk mencabut")){a=t.dataset.rm.split("|");r=fu(a[0]);if(r&&canB(r.b)){r.u.ppk=(r.u.ppk||[]).filter(function(u){return u!=a[1]});persU(r)}}
  if(t.dataset.pick){a=t.dataset.pick.split("|");r=fu(a[0]);if(r&&canB(r.b)){r.u.ppk=r.u.ppk||[];if(r.u.ppk.length){toast("Sudah memiliki PPK ("+nm(r.u.ppk[0])+"). Cabut dulu PPK tersebut sebelum menambahkan yang baru.",true);return}r.u.ppk.push(a[1]);persU(r)}}}
 async function onInput(e){var t=e.target,kind=t.dataset.qk?"pickk":t.dataset.qp?"pickp":t.dataset.q?"pick":"";if(!kind)return;var id=t.dataset.qk||t.dataset.qp||t.dataset.q,q=t.value.trim(),box=t.nextElementSibling;
  if(q.length<2){box.innerHTML="";return}
